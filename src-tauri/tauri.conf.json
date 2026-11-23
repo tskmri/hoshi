@@ -33,6 +33,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
+    "resources": ["dictionaries"],
     "targets": "all",
     "icon": [
       "icons/icon.png",

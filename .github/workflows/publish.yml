@@ -34,6 +34,12 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: fetch bundled dictionaries
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/tskmri/hoshi/releases/download/hoshi-v1.0.1/dicts.zip" -OutFile dicts.zip
+          Expand-Archive -Path dicts.zip -DestinationPath src-tauri/dictionaries -Force
+
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

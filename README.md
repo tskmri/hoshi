@@ -32,6 +32,10 @@ Download the `-setup.exe` installer for Windows 10/11 (64-bit), or build it your
 - Mining using AnkiConnect (mainly supports the handlebars used by [Lapis](https://github.com/donkuri/lapis#how-to-use-lapis))
 - Optional Google Drive sync of books, shelves, bookmarks, highlights, reading statistics and Sasayaki matches
 
+## Bundled dictionaries
+
+The installer ships with dictionaries so a fresh install can look words up immediately: Jitendex and JMnedict (terms), Jiten (frequency) and KANJIDIC (kanji). They are copied into `%APPDATA%\hoshi-reader\Dictionaries` on first launch, and an existing collection is never overwritten. They are pulled from the `dicts.zip` release asset at build time, so they are not stored in the repository.
+
 ## Development
 
 ### Prerequisites
@@ -108,6 +112,9 @@ In the app, open **Settings → Sync**, enable sync and sign in with the account
 | [Ankiconnect Android](https://github.com/KamWithK/AnkiconnectAndroid) | Implementation for local audio database | GPL-3.0 |
 | [Yomitan](https://github.com/yomidevs/yomitan) | Various code from pop-up dictionary | GPL-3.0 |
 | [@i_am_onizame](https://x.com/i_am_onizame/status/2074108413546807451) | Artwork | |
+| [Jitendex](https://github.com/Stepney141/Jitendex) | Bundled term dictionary | CC BY-SA 4.0 |
+| [JMdict and JMnedict](https://www.edrdg.org/) | Bundled term dictionaries | CC BY-SA 4.0 |
+| [KANJIDIC2](https://www.edrdg.org/) | Bundled kanji dictionary | CC BY-SA 4.0 |
 
 ## License
 

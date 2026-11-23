@@ -7,6 +7,7 @@ src-tauri/gen/
 .env.*
 !.env.example
 .tauri-signing/
+src-tauri/dictionaries/
 .DS_Store
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

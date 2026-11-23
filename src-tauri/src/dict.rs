@@ -100,13 +100,49 @@ pub(crate) fn dictionaries_dir(app: &AppHandle) -> PathBuf {
     app.path().app_data_dir().unwrap().join(DICTIONARIES_DIR)
 }
 
+const BUNDLED_DIR: &str = "dictionaries";
+
 pub(crate) fn initialize(app: &AppHandle) {
     let root = dictionaries_dir(app);
     fs::create_dir_all(&root).ok();
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
+        install_bundled(&app);
         app.state::<LookupState>().with_engine(&app, |_| ());
     });
+}
+
+/// Copies the dictionaries that ship with the installer into the app data
+/// directory on first launch. Existing libraries are left untouched.
+fn install_bundled(app: &AppHandle) {
+    let target = dictionaries_dir(app);
+    if DictionaryType::all()
+        .iter()
+        .any(|kind| target.join(kind.directory()).is_dir())
+    {
+        return;
+    }
+    let Ok(resources) = app.path().resource_dir() else {
+        return;
+    };
+    let source = resources.join(BUNDLED_DIR);
+    if source.is_dir() {
+        copy_missing(&source, &target).ok();
+    }
+}
+
+fn copy_missing(source: &Path, target: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(target)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let destination = target.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_missing(&entry.path(), &destination)?;
+        } else if !destination.exists() {
+            fs::copy(entry.path(), &destination)?;
+        }
+    }
+    Ok(())
 }
 
 fn load_config(app: &AppHandle) -> DictConfig {
