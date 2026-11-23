@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'hoshi-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and release (e.g. hoshi-v1.0.1)'
+        required: true
 
 jobs:
   publish-tauri:
@@ -12,6 +17,8 @@ jobs:
     runs-on: 'windows-latest'
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: setup pnpm
         uses: pnpm/action-setup@v6
@@ -34,8 +41,8 @@ jobs:
           HOSHI_GOOGLE_CLIENT_ID: ${{ secrets.HOSHI_GOOGLE_CLIENT_ID }}
           HOSHI_GOOGLE_CLIENT_SECRET: ${{ secrets.HOSHI_GOOGLE_CLIENT_SECRET }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Hoshi ${{ github.ref_name }}'
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: 'Hoshi ${{ inputs.tag || github.ref_name }}'
           releaseBody: 'Windows installer and the auto-update metadata used by the app.'
           releaseDraft: true
           prerelease: false
