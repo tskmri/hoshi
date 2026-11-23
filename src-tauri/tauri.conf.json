@@ -32,6 +32,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Manhhao",
     "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
