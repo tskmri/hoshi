@@ -314,6 +314,8 @@
   let cssFonts = $state<string[]>([]);
   let cssEditor = $state<HTMLTextAreaElement>();
   let downloadingStrokeOrderFont = $state(false);
+  let downloadingRecommended = $state(false);
+  let recommendedProgress = $state(0);
   const enabledFrequencyDictionaries = $derived(dictionaries.frequency.filter((dict) => dict.isEnabled));
   const usesFrequencyDictionary = $derived(
     dictConfig.frequencySortOrder === "Ascending" || dictConfig.frequencySortOrder === "Descending",
@@ -691,6 +693,36 @@
     return () => clearInterval(timer);
   });
 
+  async function downloadRecommendedDictionaries() {
+    if (
+      !(await ask(
+        "This will download the recommended dictionaries (176 MB): Jitendex, JMnedict, Jiten frequency and KANJIDIC. Dictionaries you already have are kept.",
+        { title: "Download Recommended Dictionaries", okLabel: "Download", cancelLabel: "Cancel" },
+      ))
+    )
+      return;
+    downloadingRecommended = true;
+    recommendedProgress = 0;
+    error = "";
+    const unlisten = await listen<{ received: number; total: number }>(
+      "dictionary-download-progress",
+      (event) => {
+        if (event.payload.total > 0)
+          recommendedProgress = Math.round((event.payload.received / event.payload.total) * 100);
+      },
+    );
+    try {
+      const summary = await invoke<ImportSummary>("download_recommended_dictionaries");
+      await refresh();
+      if (summary.failed.length) error = summary.failed.join("\n");
+    } catch (err) {
+      error = String(err);
+    } finally {
+      await unlisten();
+      downloadingRecommended = false;
+    }
+  }
+
   async function importZip() {
     const paths = await open({
       multiple: true,
@@ -828,20 +860,37 @@
               </button>
             </div>
 
-            {#if dictionaries.kanji.length > 0}
+            <div class="flex flex-wrap items-center gap-2">
               <button
-                class="btn btn-outline btn-sm self-start"
-                disabled={downloadingStrokeOrderFont || hasStrokeOrderFont}
-                onclick={downloadStrokeOrderFont}
+                class="btn btn-outline btn-sm"
+                disabled={downloadingRecommended}
+                onclick={downloadRecommendedDictionaries}
               >
-                {#if downloadingStrokeOrderFont}
+                {#if downloadingRecommended}
                   <span class="loading loading-xs loading-spinner"></span>
-                  Downloading Stroke Order Font
+                  {recommendedProgress > 0
+                    ? `Downloading ${recommendedProgress}%`
+                    : "Downloading Recommended Dictionaries"}
                 {:else}
-                  Download Stroke Order Font
+                  Download Recommended Dictionaries
                 {/if}
               </button>
-            {/if}
+
+              {#if dictionaries.kanji.length > 0}
+                <button
+                  class="btn btn-outline btn-sm"
+                  disabled={downloadingStrokeOrderFont || hasStrokeOrderFont}
+                  onclick={downloadStrokeOrderFont}
+                >
+                  {#if downloadingStrokeOrderFont}
+                    <span class="loading loading-xs loading-spinner"></span>
+                    Downloading Stroke Order Font
+                  {:else}
+                    Download Stroke Order Font
+                  {/if}
+                </button>
+              {/if}
+            </div>
 
             <div class="tabs tabs-border">
               {#each Object.keys(labels) as key (key)}

@@ -32,9 +32,9 @@ Download the `-setup.exe` installer for Windows 10/11 (64-bit), or build it your
 - Mining using AnkiConnect (mainly supports the handlebars used by [Lapis](https://github.com/donkuri/lapis#how-to-use-lapis))
 - Optional Google Drive sync of books, shelves, bookmarks, highlights, reading statistics and Sasayaki matches
 
-## Bundled dictionaries
+## Recommended dictionaries
 
-The installer ships with dictionaries so a fresh install can look words up immediately: Jitendex and JMnedict (terms), Jiten (frequency) and KANJIDIC (kanji). They are copied into `%APPDATA%\hoshi-reader\Dictionaries` on first launch, and an existing collection is never overwritten. They are pulled from the `dicts.zip` release asset at build time, so they are not stored in the repository.
+Settings → Dictionaries has a **Download Recommended Dictionaries** button that installs Jitendex and JMnedict (terms), Jiten (frequency) and KANJIDIC (kanji) in one step. It downloads `dicts.zip` from the [`dicts-v1`](https://github.com/tskmri/hoshi/releases/tag/dicts-v1) release asset (about 176 MB) and only adds dictionaries you do not already have, so re-running it is safe. The installers themselves stay small.
 
 ## Development
 

@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::SystemTime;
@@ -100,47 +101,156 @@ pub(crate) fn dictionaries_dir(app: &AppHandle) -> PathBuf {
     app.path().app_data_dir().unwrap().join(DICTIONARIES_DIR)
 }
 
-const BUNDLED_DIR: &str = "dictionaries";
-
 pub(crate) fn initialize(app: &AppHandle) {
     let root = dictionaries_dir(app);
     fs::create_dir_all(&root).ok();
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        install_bundled(&app);
         app.state::<LookupState>().with_engine(&app, |_| ());
     });
 }
 
-/// Copies the dictionaries that ship with the installer into the app data
-/// directory on first launch. Existing libraries are left untouched.
-fn install_bundled(app: &AppHandle) {
-    let target = dictionaries_dir(app);
-    if DictionaryType::all()
-        .iter()
-        .any(|kind| target.join(kind.directory()).is_dir())
-    {
-        return;
+const RECOMMENDED_URL: &str =
+    "https://github.com/tskmri/hoshi/releases/download/dicts-v1/dicts.zip";
+
+/// Downloads the dictionary set Hoshi recommends and installs whatever of it is
+/// missing. Dictionaries the user already has are left alone.
+#[tauri::command]
+pub async fn download_recommended_dictionaries(
+    app: AppHandle,
+    state: State<'_, LookupState>,
+) -> Result<ImportSummary, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(900))
+        .build()
+        .map_err(|error| error.to_string())?;
+    let mut response = client
+        .get(RECOMMENDED_URL)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?
+        .error_for_status()
+        .map_err(|error| error.to_string())?;
+    let total = response.content_length().unwrap_or(0);
+    let archive = std::env::temp_dir().join(format!("{}.zip", uuid::Uuid::new_v4()));
+    let mut file = std::io::BufWriter::new(
+        fs::File::create(&archive).map_err(|error| error.to_string())?,
+    );
+    let mut received = 0u64;
+    let mut reported = 0u64;
+    while let Some(chunk) = response.chunk().await.map_err(|error| error.to_string())? {
+        file.write_all(&chunk).map_err(|error| error.to_string())?;
+        received += chunk.len() as u64;
+        if received - reported > 4 * 1024 * 1024 {
+            reported = received;
+            app.emit(
+                "dictionary-download-progress",
+                json!({ "received": received, "total": total }),
+            )
+            .ok();
+        }
     }
-    let Ok(resources) = app.path().resource_dir() else {
-        return;
-    };
-    let source = resources.join(BUNDLED_DIR);
-    if source.is_dir() {
-        copy_missing(&source, &target).ok();
-    }
+    drop(file);
+
+    let result = install_recommended_dictionaries(&app, &state, &archive);
+    fs::remove_file(&archive).ok();
+    result
 }
 
-fn copy_missing(source: &Path, target: &Path) -> std::io::Result<()> {
-    fs::create_dir_all(target)?;
-    for entry in fs::read_dir(source)? {
-        let entry = entry?;
-        let destination = target.join(entry.file_name());
-        if entry.file_type()?.is_dir() {
-            copy_missing(&entry.path(), &destination)?;
-        } else if !destination.exists() {
-            fs::copy(entry.path(), &destination)?;
+fn install_recommended_dictionaries(
+    app: &AppHandle,
+    state: &State<'_, LookupState>,
+    archive: &Path,
+) -> Result<ImportSummary, String> {
+    let extracted = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    extract_archive(archive, &extracted)?;
+    let recommended: DictConfig = read_json(&extracted.join("config.json")).unwrap_or_default();
+    let root = dictionaries_dir(app);
+    for kind in DictionaryType::all() {
+        fs::create_dir_all(root.join(kind.directory())).ok();
+    }
+
+    let mut summary = ImportSummary::default();
+    let _engine = state.lock_for_update();
+    let mut config = load_config(app);
+
+    for kind in DictionaryType::all() {
+        let source = extracted.join(kind.directory());
+        let mut folders: Vec<String> = fs::read_dir(&source)
+            .into_iter()
+            .flatten()
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.is_dir() && path.join("index.json").is_file())
+            .filter_map(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .map(str::to_string)
+            })
+            .collect();
+        folders.sort_by_key(|folder| {
+            entries_for(&recommended, kind)
+                .iter()
+                .find(|entry| &entry.file_name == folder)
+                .map_or(i64::MAX, |entry| entry.order)
+        });
+        for folder in folders {
+            let directory = source.join(&folder);
+            let index = read_index(&directory);
+            let title = if index.title.is_empty() {
+                folder.clone()
+            } else {
+                index.title.clone()
+            };
+            let present = entries_for(&config, kind)
+                .iter()
+                .any(|entry| title_for_entry(app, kind, entry) == title);
+            if present {
+                continue;
+            }
+            let destination = root.join(kind.directory()).join(&folder);
+            if copy_directory(&directory, &destination).is_err() {
+                summary
+                    .failed
+                    .push(format!("{title}: could not store dictionary"));
+                continue;
+            }
+            let previous = entries_for(&recommended, kind)
+                .iter()
+                .find(|entry| entry.file_name == folder)
+                .cloned();
+            add_import_entry(&mut config, kind, folder, previous.as_ref());
+            summary.imported.push(title);
         }
+    }
+    fs::remove_dir_all(&extracted).ok();
+
+    if summary.imported.is_empty() {
+        return Ok(summary);
+    }
+    update_orders(&mut config);
+    save_config(app, &config)?;
+    Ok(summary)
+}
+
+fn extract_archive(archive: &Path, target: &Path) -> Result<(), String> {
+    let file = fs::File::open(archive).map_err(|error| error.to_string())?;
+    let mut reader = zip::ZipArchive::new(file).map_err(|error| error.to_string())?;
+    for index in 0..reader.len() {
+        let mut entry = reader.by_index(index).map_err(|error| error.to_string())?;
+        let Some(relative) = entry.enclosed_name() else {
+            continue;
+        };
+        let destination = target.join(relative);
+        if entry.is_dir() {
+            fs::create_dir_all(&destination).map_err(|error| error.to_string())?;
+            continue;
+        }
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        let mut output =
+            fs::File::create(&destination).map_err(|error| error.to_string())?;
+        std::io::copy(&mut entry, &mut output).map_err(|error| error.to_string())?;
     }
     Ok(())
 }

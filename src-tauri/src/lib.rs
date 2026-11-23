@@ -165,6 +165,7 @@ pub fn run() {
             dict::lookup,
             dict::lookup_kanji,
             dict::import_dictionaries,
+            dict::download_recommended_dictionaries,
             dict::update_dictionaries,
             dict::list_dictionaries,
             dict::set_dictionary_enabled,

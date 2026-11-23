@@ -34,14 +34,6 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: fetch bundled dictionaries
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path src-tauri/dictionaries | Out-Null
-          curl.exe -L --fail --retry 3 --retry-delay 5 -o dicts.zip "https://github.com/tskmri/hoshi/releases/download/hoshi-v1.0.1/dicts.zip"
-          if ((Get-Item dicts.zip).Length -lt 100MB) { throw "dictionary archive looks truncated" }
-          tar.exe -x -f dicts.zip -C src-tauri/dictionaries
-          Get-ChildItem src-tauri/dictionaries
 
       - uses: tauri-apps/tauri-action@v1
         env:
