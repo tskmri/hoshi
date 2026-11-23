@@ -696,7 +696,7 @@
   async function downloadRecommendedDictionaries() {
     if (
       !(await ask(
-        "This will download the recommended dictionaries (176 MB): Jitendex, JMnedict, Jiten frequency and KANJIDIC. Dictionaries you already have are kept.",
+        "This will download the recommended dictionaries (about 90 MB): Jitendex, JMnedict, Jiten frequency and KANJIDIC. Dictionaries you already have are kept.",
         { title: "Download Recommended Dictionaries", okLabel: "Download", cancelLabel: "Cancel" },
       ))
     )

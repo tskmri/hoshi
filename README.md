@@ -34,7 +34,7 @@ Download the `-setup.exe` installer for Windows 10/11 (64-bit), or build it your
 
 ## Recommended dictionaries
 
-Settings → Dictionaries has a **Download Recommended Dictionaries** button that installs Jitendex and JMnedict (terms), Jiten (frequency) and KANJIDIC (kanji) in one step. It downloads `dicts.zip` from the [`dicts-v1`](https://github.com/tskmri/hoshi/releases/tag/dicts-v1) release asset (about 176 MB) and only adds dictionaries you do not already have, so re-running it is safe. The installers themselves stay small.
+Settings → Dictionaries has a **Download Recommended Dictionaries** button that installs Jitendex and JMnedict (terms), Jiten (frequency) and KANJIDIC (kanji) in one step. It downloads `dicts.zip` from the [`dicts-v1`](https://github.com/tskmri/hoshi/releases/tag/dicts-v1) release asset (about 90 MB) and only adds dictionaries you do not already have, so re-running it is safe. The installers themselves stay small.
 
 ## Development
 
