@@ -41,6 +41,7 @@ unicode-normalization = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 tokio = { version = "1", features = ["sync", "time", "macros", "fs", "io-util"] }
 tokio-util = { version = "0.7", features = ["io"] }
+tauri-plugin-updater = { version = "2", default-features = false, features = ["native-tls", "zip"] }
 opus = "0.4"
 ogg = "0.9"
 rubato = "5"

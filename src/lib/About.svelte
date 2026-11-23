@@ -5,13 +5,36 @@
   import { aboutLicenses } from "./aboutLicenses";
   import artwork from "../../src-tauri/icons/Hoshi.icon/Assets/Artwork.png";
   import SettingsSection from "./SettingsSection.svelte";
+  import SettingRow from "./SettingRow.svelte";
 
   let version = $state("");
   getVersion().then((value) => (version = value));
   const displayVersion = $derived(version.replace(/\.0$/, ""));
 
+  let update = $state<"idle" | "checking" | "current" | "installing" | "error">("idle");
+  let updateVersion = $state<string | null>(null);
+
   function openLink(url: string) {
     invoke("open_external", { url });
+  }
+
+  async function checkUpdate() {
+    update = "checking";
+    try {
+      updateVersion = await invoke<string | null>("check_update");
+      update = updateVersion ? "idle" : "current";
+    } catch {
+      update = "error";
+    }
+  }
+
+  async function installUpdate() {
+    update = "installing";
+    try {
+      await invoke("install_update");
+    } catch {
+      update = "error";
+    }
   }
 </script>
 
@@ -22,6 +45,17 @@
       <h2 class="text-2xl font-semibold">Hoshi</h2>
       <p class="select-text text-sm text-base-content/60">Version {displayVersion}</p>
     </div>
+    <SettingRow label="Updates">
+      {#if updateVersion}
+        <button class="btn btn-primary btn-sm" disabled={update === "installing"} onclick={installUpdate}>{update === "installing" ? "Installing…" : `Install ${updateVersion}`}</button>
+      {:else}
+        <div class="flex items-center gap-3">
+          {#if update === "current"}<span class="text-sm text-base-content/60">Up to date</span>{/if}
+          {#if update === "error"}<span class="text-sm text-error">Update failed</span>{/if}
+          <button class="btn btn-sm" disabled={update === "checking"} onclick={checkUpdate}>{update === "checking" ? "Checking…" : "Check for Updates"}</button>
+        </div>
+      {/if}
+    </SettingRow>
     <button class="flex items-center justify-between gap-4 text-left text-sm" onclick={() => openLink("https://github.com/tskmri/hoshi")}>
       <span>GitHub</span><ExternalLink class="size-4 text-base-content/60" />
     </button>

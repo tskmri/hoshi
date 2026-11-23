@@ -57,6 +57,16 @@ pnpm tauri build
 
 The installer and MSI are written to `src-tauri/target/release/bundle`.
 
+### Releases and auto-update
+
+The app checks `https://github.com/tskmri/hoshi/releases/latest/download/latest.json` on launch and whenever the window regains focus, then downloads and installs the update in passive mode (the installer runs with the usual progress bar, then the app restarts).
+
+Update bundles must be signed. A keypair was generated into the gitignored `.tauri-signing/` folder; its public half is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`). To let the release workflow sign artifacts, add the contents of `.tauri-signing/hoshi.key` as a repository secret named `TAURI_SIGNING_PRIVATE_KEY` (Settings → Secrets and variables → Actions).
+
+Pushing a `v*` tag runs `.github/workflows/publish.yml`, which builds the NSIS installer, signs it, and creates a **draft** release containing `latest.json`. Publish the draft — the updater only sees published releases.
+
+Keep the private key: without it you cannot sign future updates, and clients on the current public key will reject anything else.
+
 ### Google Drive sync
 
 Sync needs your own Google Cloud OAuth client. In the Google Cloud console, enable the **Google Drive API**, create an OAuth client, and register `http://127.0.0.1:42813` as an allowed redirect URI.

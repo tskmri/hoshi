@@ -18,6 +18,7 @@
   import Settings, { settingsTabs, type SettingsTab } from "./lib/Settings.svelte";
   import SourceList from "./lib/SourceList.svelte";
   import AttachDialog from "./lib/AttachDialog.svelte";
+  import UpdateDialog from "./lib/UpdateDialog.svelte";
   import type {
     AppView,
     BookMetadata,
@@ -468,3 +469,4 @@
 
 
 <AttachDialog />
+<UpdateDialog />
