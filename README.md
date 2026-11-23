@@ -7,6 +7,13 @@
 
 A desktop reader for Japanese books on Windows, built with Tauri and Svelte.
 
+<p align="center">
+  <img src=".github/screenshots/home.png" width="49%" alt="Home">
+  <img src=".github/screenshots/library.png" width="49%" alt="Library">
+  <img src=".github/screenshots/reader.png" width="49%" alt="Vertical reader">
+  <img src=".github/screenshots/sync.png" width="49%" alt="Google Drive sync settings">
+</p>
+
 </div>
 
 ## Download

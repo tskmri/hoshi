@@ -1162,7 +1162,7 @@
               {/each}
             </select>
           </SettingRow>
-          <p class="text-xs text-base-content/60">Sync your library between Hoshi Reader devices.</p>
+          <p class="text-xs text-base-content/60">Sync your library between Hoshi devices.</p>
         </SettingsSection>
 
         {#if syncConfig.enableSync}
