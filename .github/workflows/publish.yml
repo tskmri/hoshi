@@ -3,7 +3,7 @@ name: 'publish'
 on:
   push:
     tags:
-      - 'v*'
+      - 'hoshi-v*'
 
 jobs:
   publish-tauri:
