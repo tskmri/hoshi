@@ -63,7 +63,7 @@ The app checks `https://github.com/tskmri/hoshi/releases/latest/download/latest.
 
 Update bundles must be signed. A keypair was generated into the gitignored `.tauri-signing/` folder; its public half is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`). To let the release workflow sign artifacts, add the contents of `.tauri-signing/hoshi.key` as a repository secret named `TAURI_SIGNING_PRIVATE_KEY` (Settings → Secrets and variables → Actions).
 
-Pushing a `hoshi-v*` tag (for example `hoshi-v1.0.1`) runs `.github/workflows/publish.yml`, which builds the NSIS installer, signs it, and creates a **draft** release containing `latest.json`. Publish the draft — the updater only sees published releases. The `hoshi-v` prefix keeps fork releases apart from the upstream `v*` tags this repository was forked with.
+Pushing a `hoshi-v*` tag (for example `hoshi-v1.0.1`) runs `.github/workflows/publish.yml`; it can also be started by hand from Actions → publish → Run workflow with the tag as input. The job builds the NSIS installer, signs it, and creates a **draft** release containing `latest.json`. Publish the draft — the updater only sees published releases. The `hoshi-v` prefix keeps fork releases apart from the upstream `v*` tags this repository was forked with.
 
 Keep the private key: without it you cannot sign future updates, and clients on the current public key will reject anything else.
 
