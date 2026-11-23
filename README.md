@@ -1,42 +1,39 @@
 <div align="center">
 
-# Hoshi Reader Desktop
+# Hoshi
 
-![Language](https://img.shields.io/github/languages/top/Manhhao/Hoshi-Reader-Desktop)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
-![License](https://img.shields.io/github/license/Manhhao/Hoshi-Reader-Desktop)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![License](https://img.shields.io/github/license/tskmri/hoshi)
 
-Desktop version of [Hoshi Reader](https://github.com/Manhhao/Hoshi-Reader) and [Hoshi Reader Android](https://github.com/HuangAntimony/Hoshi-Reader-Android), made using Tauri and Svelte.
+A desktop reader for Japanese books on Windows, built with Tauri and Svelte.
 
 </div>
 
 ## Download
 
-[![Download](https://img.shields.io/github/v/release/Manhhao/Hoshi-Reader-Desktop?label=Download&style=for-the-badge&logo=github&color=5283f7)](https://github.com/Manhhao/Hoshi-Reader-Desktop/releases/latest)
+[![Download](https://img.shields.io/github/v/release/tskmri/hoshi?label=Download&style=for-the-badge&logo=github&color=5283f7)](https://github.com/tskmri/hoshi/releases/latest)
 
-Download the `.dmg` for macOS 15+ (Apple Silicon) or the `-setup.exe` for Windows.
+Download the `-setup.exe` installer for Windows 10/11 (64-bit), or build it yourself with the steps below.
 
 ## Features
 
-- Vertical (縦書き) and horizontal (横書き) text
+- Vertical (縦書き) and horizontal (横書き) text with custom fonts, sizing and fullscreen reading
 - Pop-up dictionary with support for Yomitan term, frequency, pitch and kanji dictionaries
 - Audio support for local and remote sources
-- Sasayaki (audiobooks)
-- Reading statistics
-- Mining using AnkiConnect (mainly supports handlebars used by [Lapis](https://github.com/donkuri/lapis#how-to-use-lapis))
-- Syncing of books, shelves, bookmarks, highlights and Sasayaki with iOS and Android
+- Sasayaki (audiobook) playback with transcript matching
+- Library with shelves, reading statistics and reading goals
+- Mining using AnkiConnect (mainly supports the handlebars used by [Lapis](https://github.com/donkuri/lapis#how-to-use-lapis))
+- Optional Google Drive sync of books, shelves, bookmarks, highlights, reading statistics and Sasayaki matches
 
 ## Development
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.88+
-- [Node.js](https://nodejs.org/) 22.12+
-- [pnpm](https://pnpm.io/)
+- Windows 10/11 (64-bit)
+- [Rust](https://rustup.rs/) stable (see `rust-version` in `src-tauri/Cargo.toml`)
+- [Node.js](https://nodejs.org/) 22.12+ and [pnpm](https://pnpm.io/) 11
 - [CMake](https://cmake.org/) 3.24+
-- A C++23 compiler
-  - macOS: Xcode Command Line Tools
-  - Windows: Visual Studio with *Desktop development with C++ workload* and *C++ Clang tools for Windows*
+- Visual Studio 2022 with the *Desktop development with C++* workload and *C++ Clang tools for Windows*
 
 ### Run
 
@@ -47,21 +44,26 @@ pnpm tauri dev
 
 ### Build
 
-Build release bundles without signing keys:
-
 ```sh
-pnpm tauri build --no-sign
+pnpm tauri build
 ```
 
-To enable Google Drive sync, set `HOSHI_GOOGLE_CLIENT_ID` and `HOSHI_GOOGLE_CLIENT_SECRET` from your own Google Cloud project before building.
+The installer and MSI are written to `src-tauri/target/release/bundle`.
 
-## Contributing
+### Google Drive sync
 
-If you're planning on contributing something significant, please open an issue or message me on Discord ([manhhao](https://discord.com/users/278886957667319808)) first.
+Sync needs your own Google Cloud OAuth client. In the Google Cloud console, enable the **Google Drive API**, create an OAuth client, and register `http://127.0.0.1:42813` as an allowed redirect URI.
 
-## Issues
+Then create a `.env` file in the project root:
 
-Please open an issue [here](https://github.com/Manhhao/Hoshi-Reader-Desktop/issues) or in the TMW thread.
+```sh
+HOSHI_GOOGLE_CLIENT_ID=your-client-id
+HOSHI_GOOGLE_CLIENT_SECRET=your-client-secret
+```
+
+`src-tauri/build.rs` reads these at compile time and bakes them into the binary, so rebuild after changing them. `.env` is gitignored and no credentials belong in the repository.
+
+In the app, open **Settings → Sync**, enable sync and sign in with the account whose Drive should hold the library. Data is written to a `Hoshi` folder in that account's Drive (`Hoshi/books` for EPUBs, covers and Sasayaki matches, `Hoshi/state` for the synced reading state).
 
 ## Libraries
 
@@ -83,6 +85,9 @@ Please open an issue [here](https://github.com/Manhhao/Hoshi-Reader-Desktop/issu
 
 | Name | Description | License |
 | :--- | :--- | :--- |
+| [Hoshi Reader Desktop](https://github.com/Manhhao/Hoshi-Reader-Desktop) | Desktop app this project is based on | GPL-3.0 |
+| [Hoshi Reader](https://github.com/Manhhao/Hoshi-Reader) | Original iOS app | GPL-3.0 |
+| [Hoshi Reader Android](https://github.com/HuangAntimony/Hoshi-Reader-Android) | Android app | GPL-3.0 |
 | [Ankiconnect Android](https://github.com/KamWithK/AnkiconnectAndroid) | Implementation for local audio database | GPL-3.0 |
 | [Yomitan](https://github.com/yomidevs/yomitan) | Various code from pop-up dictionary | GPL-3.0 |
 | [@i_am_onizame](https://x.com/i_am_onizame/status/2074108413546807451) | Artwork | |
