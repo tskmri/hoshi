@@ -7,14 +7,6 @@
 ![License](https://img.shields.io/github/license/Manhhao/Hoshi-Reader-Desktop)
 
 Desktop version of [Hoshi Reader](https://github.com/Manhhao/Hoshi-Reader) and [Hoshi Reader Android](https://github.com/HuangAntimony/Hoshi-Reader-Android), made using Tauri and Svelte.
-<p align="center">
-    <img src=".github/screenshots/home.png" width="49%" alt="home">
-    <img src=".github/screenshots/reader.png" width="49%" alt="reader">
-    <img src=".github/screenshots/shelf.png" width="49%" alt="shelf">
-    <img src=".github/screenshots/statistics.png" width="49%" alt="statistics">
-    <img src=".github/screenshots/gallery.png" width="49%" alt="gallery">
-    <img src=".github/screenshots/dictionary.png" width="49%" alt="dictionary">
-</p>
 
 </div>
 
@@ -58,7 +50,7 @@ pnpm tauri dev
 Build release bundles without signing keys:
 
 ```sh
-pnpm tauri build --no-sign --config '{"bundle":{"createUpdaterArtifacts":false}}'
+pnpm tauri build --no-sign
 ```
 
 To enable Google Drive sync, set `HOSHI_GOOGLE_CLIENT_ID` and `HOSHI_GOOGLE_CLIENT_SECRET` from your own Google Cloud project before building.
