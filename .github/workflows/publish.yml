@@ -34,7 +34,6 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,7 +43,7 @@ jobs:
         with:
           tagName: ${{ inputs.tag || github.ref_name }}
           releaseName: 'Hoshi ${{ inputs.tag || github.ref_name }}'
-          releaseBody: 'Windows installer and the auto-update metadata used by the app.'
+          releaseBody: 'Windows installer and the auto-update metadata used by the app. Dictionaries are not bundled: install the recommended set from Settings → Dictionaries.'
           releaseDraft: true
           prerelease: false
           args: '--bundles nsis'
