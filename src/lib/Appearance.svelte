@@ -98,7 +98,7 @@
 
 {#snippet themePicker()}
   <div class="join w-full">
-    {#each ["System", "Light", "Dark", "Sepia", "Custom"] as const as theme (theme)}
+    {#each ["System", "Light", "Dark", "Custom"] as const as theme (theme)}
       <button
         class="btn join-item btn-sm flex-1 px-0 {readerConfig.theme === theme ? 'btn-active' : ''}"
         onclick={() => {
@@ -113,22 +113,6 @@
 {/snippet}
 
 {#snippet themeOptions()}
-  {#if readerConfig.theme === "System"}
-    <SettingToggle
-      label="Use Sepia as Light Theme"
-      {compact}
-      bind:checked={readerConfig.systemLightSepia}
-      onchange={saveReaderConfig}
-    />
-  {/if}
-  {#if readerConfig.theme === "Sepia"}
-    <SettingToggle
-      label="Invert in System Dark Theme"
-      {compact}
-      bind:checked={readerConfig.sepiaInvertInDark}
-      onchange={saveReaderConfig}
-    />
-  {/if}
   {#if readerConfig.theme === "Custom"}
     <SettingRow label="Theme" {compact}>
       <div class="flex items-center gap-2">
@@ -238,6 +222,16 @@
     min={16}
     max={40}
     onchange={() => save(onRestyle)}
+  />
+  <SettingSlider
+    label="Font Weight"
+    {compact}
+    bind:value={readerConfig.fontWeight}
+    min={200}
+    max={900}
+    step={10}
+    onchange={restyleLive}
+    onrelease={restyleReleased}
   />
   <SettingRow label="Hide Furigana" {compact}>
     <select

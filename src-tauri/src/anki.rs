@@ -550,15 +550,64 @@ pub fn anki_config(app: AppHandle) -> PopupAnkiConfig {
             .map(|(title, _)| title)
             .collect(),
         needs_audio: needs_audio(&config),
-        audio_sources: config
-            .audio_sources
-            .iter()
-            .filter(|s| s.is_enabled)
-            .cloned()
-            .collect(),
+        audio_sources: {
+            let mut sources: Vec<AudioSource> = config
+                .audio_sources
+                .iter()
+                .filter(|s| s.is_enabled)
+                .cloned()
+                .collect();
+            sources.push(builtin_audio_source());
+            sources
+        },
         audio_enable_autoplay: config.audio_enable_autoplay,
         audio_volume: config.audio_volume,
     }
+}
+
+const BUILTIN_AUDIO_ENDPOINT: &str =
+    "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php";
+const BUILTIN_AUDIO_TEMPLATE: &str =
+    "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={term}&kana={reading}";
+
+fn builtin_audio_source() -> AudioSource {
+    AudioSource {
+        name: "JapanesePod101".to_string(),
+        url: BUILTIN_AUDIO_TEMPLATE.to_string(),
+        is_enabled: true,
+    }
+}
+
+/// JapanesePod101 answers with a redirect to the CDN clip when it has a recording for the word,
+/// and with a generic 200 fallback otherwise, so the redirect tells us whether audio exists.
+async fn builtin_audio_list(target: &str) -> Vec<u8> {
+    const EMPTY: &str = r#"{"type":"audioSourceList","audioSources":[]}"#;
+    let empty = || EMPTY.as_bytes().to_vec();
+    let Ok(client) = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(4))
+        .build()
+    else {
+        return empty();
+    };
+    let Ok(response) = client.get(target).send().await else {
+        return empty();
+    };
+    let location = response
+        .status()
+        .is_redirection()
+        .then(|| response.headers().get(reqwest::header::LOCATION))
+        .flatten()
+        .and_then(|value| value.to_str().ok())
+        .filter(|url| url.starts_with("https://cdn.innovativelanguage.com/"));
+    let Some(url) = location else {
+        return empty();
+    };
+    serde_json::to_vec(&json!({
+        "type": "audioSourceList",
+        "audioSources": [{ "name": "JapanesePod101", "url": url }]
+    }))
+    .unwrap_or_else(|_| empty())
 }
 
 pub async fn fetch_audio_source_list(app: &AppHandle, uri: &str) -> Result<Vec<u8>, String> {
@@ -572,6 +621,9 @@ pub async fn fetch_audio_source_list(app: &AppHandle, uri: &str) -> Result<Vec<u
         .into_owned();
     if target.starts_with("local-audio://") {
         return Ok(local_audio::source_list(app, &target));
+    }
+    if target.starts_with(BUILTIN_AUDIO_ENDPOINT) {
+        return Ok(builtin_audio_list(&target).await);
     }
     let client = reqwest::Client::new();
     let resp = client

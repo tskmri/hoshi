@@ -12,12 +12,11 @@
   import ManageShelves from "./lib/ManageShelves.svelte";
   import Rail from "./lib/Rail.svelte";
   import Reader from "./lib/Reader.svelte";
+  import Titlebar from "./lib/Titlebar.svelte";
   import { readerConfig } from "./lib/readerConfig.svelte";
   import type { BookHighlight } from "./lib/highlights";
   import Settings, { settingsTabs, type SettingsTab } from "./lib/Settings.svelte";
   import SourceList from "./lib/SourceList.svelte";
-  import ChangelogDialog from "./lib/ChangelogDialog.svelte";
-  import UpdateDialog from "./lib/UpdateDialog.svelte";
   import AttachDialog from "./lib/AttachDialog.svelte";
   import type {
     AppView,
@@ -28,10 +27,7 @@
     ShelfSource,
     TocItem,
   } from "./lib/types";
-  import {
-    autoUpdateDictionaries,
-    loadCollapsedDictionaries,
-  } from "./lib/dictConfig.svelte";
+  import { loadCollapsedDictionaries } from "./lib/dictConfig.svelte";
   import {
     authors,
     isCompleted,
@@ -69,6 +65,8 @@
   let manageShelves = $state<ReturnType<typeof ManageShelves>>();
 
   const hasSource = $derived(view === "books" || view === "settings");
+  // Settings always shows its tab list; Books respects the remembered collapse state.
+  const showSidebar = $derived(view === "settings" || (hasSource && !shellConfig.homeBarCollapsed));
   const bookSeries = $derived(shellConfig.showSeries ? series(books, seriesStore.names) : []);
   const bookAuthors = $derived(shellConfig.showAuthors ? authors(books) : []);
   const bookShelves = $derived(
@@ -120,7 +118,7 @@
   }
 
   $effect(() => {
-    document.documentElement.dataset.theme = chromeTheme(!!current);
+    document.documentElement.dataset.theme = chromeTheme();
     const scheme = chromeOverride();
     getCurrentWindow().setTheme(scheme);
     invoke("set_menu_theme", { dark: scheme && scheme === "dark" });
@@ -292,13 +290,12 @@
   Promise.all([refresh(), loadShelves()]).then(() => migrateShelfOrders(books));
   configureSync().then(() => invoke("gdrive_sync_start"));
   loadCollapsedDictionaries();
-  autoUpdateDictionaries();
 </script>
 
 {#snippet sourceRow(target: ShelfSource, label: string, count: number | null, onmenu?: (e: MouseEvent) => void)}
   <li>
     <button
-      class={sameSource(source, target) ? "menu-active" : ""}
+      class={sameSource(source, target) ? "menu-active font-medium" : "text-base-content/75"}
       onclick={() => (source = target)}
       oncontextmenu={onmenu}
     >
@@ -310,9 +307,12 @@
   </li>
 {/snippet}
 
-{#if current}
-  <Reader
-    {...current}
+<div class="flex h-full flex-col">
+  <Titlebar title={current?.title ?? "Hoshi"} />
+  <div class="min-h-0 flex-1">
+    {#if current}
+      <Reader
+        {...current}
     onClose={() => {
       current = null;
       loadShelves();
@@ -321,14 +321,14 @@
   />
 {:else}
   <div class="flex h-full">
-    <Rail {view} onNavigate={(v) => (view = v)} />
+    <Rail {view} showToggle={view === "books"} onNavigate={(v) => (view = v)} />
 
-    {#if hasSource}
+    {#if showSidebar}
       <SourceList>
         {#if view === "books"}
-          <ul class="menu w-full gap-0.5 p-2">
+          <ul class="menu w-full gap-0.5 p-2 [--menu-active-bg:transparent] [--menu-active-fg:var(--color-base-content)]">
             {@render sourceRow({ kind: "home" }, "Home", null)}
-            {@render sourceRow({ kind: "all" }, "All Books", books.length)}
+            {@render sourceRow({ kind: "all" }, "Library", books.length)}
             {#if completedCount > 0}
               {@render sourceRow({ kind: "completed" }, "Completed", completedCount)}
             {/if}
@@ -336,7 +336,7 @@
               {@render sourceRow({ kind: "unshelved" }, "Unshelved", unshelvedCount)}
             {/if}
             {#if visibleShelves.length > 0}
-              <li class="menu-title text-[11px] font-medium uppercase tracking-wider">Shelves</li>
+              <li class="menu-title text-[10px] font-medium uppercase tracking-[0.18em] text-base-content/40">Shelves</li>
               {#each visibleShelves as shelf (shelf.name)}
                 {@render sourceRow(
                   { kind: "shelf", name: shelf.name },
@@ -347,7 +347,7 @@
               {/each}
             {/if}
             {#if bookSeries.length > 0}
-              <li class="menu-title text-[11px] font-medium uppercase tracking-wider">Series</li>
+              <li class="menu-title text-[10px] font-medium uppercase tracking-[0.18em] text-base-content/40">Series</li>
               {#each bookSeries as group (group.key)}
                 {@render sourceRow(
                   { kind: "series", name: group.name, key: group.key },
@@ -358,7 +358,7 @@
               {/each}
             {/if}
             {#if bookAuthors.length > 0}
-              <li class="menu-title text-[11px] font-medium uppercase tracking-wider">Authors</li>
+              <li class="menu-title text-[10px] font-medium uppercase tracking-[0.18em] text-base-content/40">Authors</li>
               {#each bookAuthors as author (author.name)}
                 {@render sourceRow(
                   { kind: "author", name: author.name },
@@ -369,11 +369,11 @@
             {/if}
           </ul>
         {:else}
-          <ul class="menu w-full gap-0.5 p-2">
+          <ul class="menu w-full gap-0.5 p-2 [--menu-active-bg:transparent] [--menu-active-fg:var(--color-base-content)]">
             {#each settingsTabs as [id, label] (id)}
               <li>
                 <button
-                  class={settingsTab === id ? "menu-active" : ""}
+                  class={settingsTab === id ? "menu-active font-medium" : "text-base-content/75"}
                   onclick={() => (settingsTab = id)}
                 >
                   {label}
@@ -386,7 +386,7 @@
         {#snippet footer()}
           {#if view === "books"}
             <button
-              class="btn btn-ghost w-full justify-start gap-2 px-2"
+              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-base-content/75 transition-colors hover:bg-base-content/5 hover:text-base-content"
               onclick={() => manageShelves?.show()}
             >
               <FolderCog class="size-5 shrink-0" />
@@ -397,7 +397,8 @@
       </SourceList>
     {/if}
 
-    <main class="relative min-w-0 flex-1">
+    <main class="relative min-w-0 flex-1 p-3">
+      <div class="relative h-full overflow-hidden rounded-[1.75rem] border border-base-content/10 bg-base-100">
       {#if view === "books"}
         <Bookshelf
           books={shelfBooks(books, source)}
@@ -425,8 +426,9 @@
           }}
         />
       {/if}
-      <div class="absolute inset-0 {view === 'dictionary' ? '' : 'invisible'}" inert={view !== "dictionary"}>
-        <DictionarySearch active={view === "dictionary"} />
+        <div class="absolute inset-0 {view === 'dictionary' ? '' : 'invisible'}" inert={view !== "dictionary"}>
+          <DictionarySearch active={view === "dictionary"} />
+        </div>
       </div>
     </main>
   </div>
@@ -460,8 +462,9 @@
       <button>close</button>
     </form>
   </dialog>
-{/if}
+    {/if}
+  </div>
+</div>
 
-<ChangelogDialog />
-<UpdateDialog />
+
 <AttachDialog />

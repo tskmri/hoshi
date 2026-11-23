@@ -14,7 +14,10 @@ use crate::sync::client::{
 use crate::sync::gdrive::manager::{save_cache, shared};
 use crate::sync::task;
 
-const REPLACED_ROOT: &str = "Hoshi Reader (replaced)";
+pub const ROOT: &str = "Hoshi";
+const LEGACY_ROOT: &str = "Hoshi Reader";
+const REPLACED_ROOT: &str = "Hoshi (replaced)";
+const LEGACY_REPLACED_ROOT: &str = "Hoshi Reader (replaced)";
 const FILE_FIELDS: &str = "id,name,mimeType,md5Checksum,size,parents,trashed,createdTime";
 
 impl GoogleDriveFile {
@@ -101,12 +104,25 @@ pub async fn changes(cursor: &str) -> Result<GoogleDriveChanges> {
     decode(&data)
 }
 
+pub fn is_root(name: &str) -> bool {
+    name == ROOT || name == LEGACY_ROOT
+}
+
 pub async fn layout() -> Result<Layout> {
-    let existing = folder("root", "Hoshi Reader", false).await?;
+    let mut existing = folder("root", ROOT, false).await?;
+    if existing.is_none()
+        && let Some(legacy) = children("root", Some(LEGACY_ROOT))
+            .await?
+            .into_iter()
+            .find(GoogleDriveFile::is_folder)
+    {
+        client::rename_file(&legacy.id, ROOT).await?;
+        existing = Some(legacy.id);
+    }
     let created = existing.is_none();
     let root = match existing {
         Some(root) => root,
-        None => create_folder("root", "Hoshi Reader").await?,
+        None => create_folder("root", ROOT).await?,
     };
     let state = folder(&root, "state", true).await?.unwrap();
     let books = folder(&root, "books", true).await?.unwrap();
@@ -119,17 +135,21 @@ pub async fn layout() -> Result<Layout> {
 }
 
 pub async fn rename_root() -> Result<()> {
-    for folder in children("root", Some("Hoshi Reader")).await? {
-        if folder.is_folder() {
-            client::rename_file(&folder.id, REPLACED_ROOT).await?;
+    for name in [ROOT, LEGACY_ROOT] {
+        for folder in children("root", Some(name)).await? {
+            if folder.is_folder() {
+                client::rename_file(&folder.id, REPLACED_ROOT).await?;
+            }
         }
     }
     Ok(())
 }
 
 pub async fn remove_replaced() -> Result<()> {
-    for folder in children("root", Some(REPLACED_ROOT)).await? {
-        delete_tree(folder.id).await?;
+    for name in [REPLACED_ROOT, LEGACY_REPLACED_ROOT] {
+        for folder in children("root", Some(name)).await? {
+            delete_tree(folder.id).await?;
+        }
     }
     Ok(())
 }
@@ -225,6 +245,20 @@ pub async fn list(query: &str) -> Result<Vec<GoogleDriveFile>> {
 
 pub async fn read(file: &GoogleDriveFile) -> Result<Vec<u8>> {
     client::get(&format!("files/{}", file.id), &[("alt", "media")]).await
+}
+
+#[derive(Deserialize)]
+struct FileStatus {
+    #[serde(default)]
+    trashed: bool,
+}
+
+pub async fn exists(id: &str) -> Result<bool> {
+    match client::get(&format!("files/{id}"), &[("fields", "id,trashed")]).await {
+        Ok(data) => Ok(!decode::<FileStatus>(&data)?.trashed),
+        Err(error) if error.is_not_found() => Ok(false),
+        Err(error) => Err(error),
+    }
 }
 
 pub async fn upload(path: &Path, file_name: &str, folder: &str, meter: &Arc<Meter>) -> Result<()> {

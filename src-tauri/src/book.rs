@@ -176,6 +176,7 @@ pub fn book_protocol(app: &AppHandle, request: Request<Vec<u8>>) -> Response<Vec
         return Response::builder()
             .header(CONTENT_TYPE, "text/javascript")
             .header("Access-Control-Allow-Origin", "*")
+            .header("Cache-Control", "no-store")
             .body(js.as_bytes().to_vec())
             .unwrap();
     }
@@ -200,9 +201,11 @@ pub fn book_protocol(app: &AppHandle, request: Request<Vec<u8>>) -> Response<Vec
                 Some(max) if mime.starts_with("image/") => library::fit_image(bytes, max),
                 _ => bytes,
             };
+            let cache = if mime.starts_with("text/") { "no-store" } else { "max-age=86400" };
             Response::builder()
                 .header(CONTENT_TYPE, mime)
                 .header("Access-Control-Allow-Origin", "*")
+                .header("Cache-Control", cache)
                 .body(bytes)
                 .unwrap()
         }
@@ -250,12 +253,12 @@ fn serve_resource(app: &AppHandle, path: &str, inject_reader: bool) -> Option<(S
 fn inject_scripts(bytes: Vec<u8>) -> Vec<u8> {
     const STYLE: &str = r#"<style>:root{color-scheme:light dark}html{opacity:0;background:transparent!important}html,body{overflow:hidden}</style>"#;
     const TAGS: &str = concat!(
-        r#"<script src="/__hoshi/reader.js"></script>"#,
-        r#"<script src="/__hoshi/selection.js"></script>"#,
-        r#"<script src="/__hoshi/highlights.js"></script>"#,
-        r#"<script src="/__hoshi/paragraph.js"></script>"#,
-        r#"<script src="/__hoshi/input.js"></script>"#,
-        r#"<script src="/__hoshi/boot.js"></script>"#,
+        r#"<script src="/__hoshi/reader.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/selection.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/highlights.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/paragraph.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/input.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/boot.js?v=4"></script>"#,
     );
     let mut html = String::from_utf8_lossy(&bytes).into_owned();
     let head_end = html
@@ -283,12 +286,12 @@ fn inject_scripts(bytes: Vec<u8>) -> Vec<u8> {
 fn continuous_shell(app: &AppHandle, id: &str) -> Option<Vec<u8>> {
     const HEAD: &str = r#"<!doctype html><html><head><meta charset="utf-8"><style>:root{color-scheme:light dark}html{opacity:0}</style></head><body>"#;
     const TAGS: &str = concat!(
-        r#"<script src="/__hoshi/reader.js"></script>"#,
-        r#"<script src="/__hoshi/scrollreader.js"></script>"#,
-        r#"<script src="/__hoshi/selection.js"></script>"#,
-        r#"<script src="/__hoshi/highlights.js"></script>"#,
-        r#"<script src="/__hoshi/input.js"></script>"#,
-        r#"<script src="/__hoshi/scrollboot.js"></script>"#,
+        r#"<script src="/__hoshi/reader.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/scrollreader.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/selection.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/highlights.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/input.js?v=4"></script>"#,
+        r#"<script src="/__hoshi/scrollboot.js?v=4"></script>"#,
     );
     let epub = Epub::open(library::book_epub_path(app, id)?).ok()?;
     let spine = serde_json::to_string(&book_document(&epub).spine)

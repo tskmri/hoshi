@@ -150,36 +150,6 @@
   let pressLookup: Promise<void> | null = null;
   let showBar = $state(false);
 
-  let titleDownAt: { x: number; y: number } | null = null;
-  let titleDragging = false;
-
-  function onTitleBarPointerDown(e: PointerEvent) {
-    if (e.button !== 0) return;
-    if (e.detail >= 2) {
-      titleDownAt = null;
-      getCurrentWindow().toggleMaximize();
-      return;
-    }
-    titleDownAt = { x: e.clientX, y: e.clientY };
-    titleDragging = false;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }
-
-  function onTitleBarPointerMove(e: PointerEvent) {
-    if (!titleDownAt || titleDragging) return;
-    const dx = e.clientX - titleDownAt.x;
-    const dy = e.clientY - titleDownAt.y;
-    if (dx * dx + dy * dy > 16) {
-      titleDragging = true;
-      getCurrentWindow().startDragging();
-    }
-  }
-
-  function onTitleBarPointerUp() {
-    if (titleDownAt && !titleDragging) showBar = !showBar;
-    titleDownAt = null;
-    titleDragging = false;
-  }
   let contentEl: HTMLDivElement;
   let pendingFragment: string | null = null;
   let frameWidth = $state(0);
@@ -261,7 +231,7 @@
   function layoutQuery(spread: boolean) {
     const mode = vertical ? "vertical" : "horizontal";
     return (
-      `mode=${mode}&fs=${readerConfig.fontSize}&hp=${readerConfig.horizontalPadding}&vp=${readerConfig.verticalPadding}&mw=${readerConfig.maxWidth}&mh=${readerConfig.maxHeight}` +
+      `mode=${mode}&fs=${readerConfig.fontSize}&fw=${readerConfig.fontWeight}&hp=${readerConfig.horizontalPadding}&vp=${readerConfig.verticalPadding}&mw=${readerConfig.maxWidth}&mh=${readerConfig.maxHeight}` +
       `&j=${readerConfig.justifyText ? 1 : 0}&apb=${readerConfig.avoidPageBreak ? 1 : 0}` +
       `&adv=${readerConfig.layoutAdvanced ? 1 : 0}&lh=${readerConfig.lineHeight}` +
       `&cs=${readerConfig.characterSpacing}&ps=${readerConfig.paragraphSpacing}` +
@@ -284,7 +254,7 @@
         `&sdl=${hotkeyConfig.scanDelay}&cz=${hotkeyConfig.pageClickZone}` +
         `&tc=${readerText ? readerText.slice(1) : ""}` +
         `&stc=${encodeURIComponent(sasayakiTextColor)}&sbc=${encodeURIComponent(sasayakiBackgroundColor)}` +
-        `&suc=${encodeURIComponent(sasayakiUnderlineColor)}&sut=${sasayakiConfig.sasayakiUnderlineThickness}`,
+        `&suc=${encodeURIComponent(sasayakiUnderlineColor)}&sut=${sasayakiConfig.sasayakiUnderlineThickness}&rv=4`,
     );
   }
 
@@ -710,12 +680,8 @@
   }
 
   const chromeInset = 28;
-  const windowButtonsRight = 78;
-  const windowButtonsBottom = 28;
   const chromeInsetX = 25;
   const speedPresets = [0.75, 1, 1.25, 1.5, 1.75, 2];
-
-  const macChrome = $derived(isMac && !fullscreen);
 
   function markerTop(inset: number) {
     return topProgress
@@ -1393,7 +1359,7 @@
       )
       .map((binding) => hotkeyConfig[binding.key])
       .filter(Boolean)
-      .concat("F11"),
+      .concat("F11", "f"),
   );
 
   const frameHotkeys = $derived(
@@ -1408,7 +1374,7 @@
       return;
     }
     if (repeat || !readerShortcutKeys.includes(key)) return;
-    if (key === "F11") toggleFullscreen();
+    if (key === "F11" || key === "f") toggleFullscreen();
     else if (key === hotkeyConfig.toggleTracking) toggleTracking();
     else if (key === hotkeyConfig.manualBookmark) postToFrame({ hoshi: "bookmark-mode" });
     else if (key === hotkeyConfig.exitReader) {
@@ -1748,6 +1714,7 @@
     postToFrame({
       hoshi: "restyle",
       fs: readerConfig.fontSize,
+      fw: readerConfig.fontWeight,
       hp: readerConfig.horizontalPadding,
       vp: readerConfig.verticalPadding,
       mw: readerConfig.maxWidth,
@@ -1787,23 +1754,12 @@
 </script>
 
 <div class="relative flex h-full select-none flex-col">
-  {#if macChrome}
-    <button
-      class="absolute inset-x-0 top-0 z-[2210] h-[2.0625rem] cursor-default"
-      onpointerdown={onTitleBarPointerDown}
-      onpointermove={onTitleBarPointerMove}
-      onpointerup={onTitleBarPointerUp}
-    ></button>
-  {/if}
   <div class="pointer-events-none absolute inset-x-0 top-0 z-[2203]">
-    {#if !macChrome}
-      <button
-        class="pointer-events-auto absolute inset-x-0 top-0 h-6 cursor-default"
-        onclick={() => (showBar = !showBar)}
-      ></button>
-    {/if}
+    <button
+      class="pointer-events-auto absolute inset-x-0 top-0 h-6 cursor-default"
+      onclick={() => (showBar = !showBar)}
+    ></button>
     <header
-      style={macChrome ? "padding-top: 2.0625rem" : ""}
       inert={!showBar && !readerPanel}
       class="relative flex items-center gap-3 border-b border-base-300 bg-base-100/80 px-4 py-2.5 backdrop-blur transition-all duration-300 {showBar || readerPanel
         ? 'pointer-events-auto translate-y-0 opacity-100'
@@ -1852,7 +1808,6 @@
             {/key}
           {/if}
         </div>
-        <span class="block max-w-[calc(100%-39rem)] truncate text-sm font-semibold">{title}</span>
         <div class="flex w-24 shrink-0">
           {#if forwardTarget !== null}
             {#key forwardTarget}
@@ -1979,12 +1934,11 @@
       {@const edge = chromeInsetX + (spread ? frameInset + spreadGap / 2 : (frameWidth * effectivePadding(readerConfig.horizontalPadding, readerConfig.maxWidth, frameWidth)) / 200)}
       {@const top = Math.round((frameHeight * effectivePadding(readerConfig.verticalPadding, readerConfig.maxHeight, frameHeight)) / 200)}
       {@const size = Math.max(11, Math.round(readerConfig.fontSize * 0.6))}
-      {@const underButtons = macChrome && top + chromeInset / 2 - size / 2 < windowButtonsBottom}
-      {@const textStyle = `font: ${size}px "${readerConfig.selectedFont}", "Hiragino Mincho ProN", "Yu Mincho", serif${readerInfo ? `; color: ${readerInfo}` : ""}`}
+      {@const textStyle = `font: ${readerConfig.fontWeight} ${size}px "${readerConfig.selectedFont}", "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif; font-variation-settings: "wght" ${readerConfig.fontWeight}${readerInfo ? `; color: ${readerInfo}` : ""}`}
       <span
         class="pointer-events-none absolute z-20 flex h-7 max-w-[40%] items-center gap-[1em] text-base-content/60 transition-opacity duration-200"
         class:opacity-0={resizing}
-        style="top: {top}px; left: {underButtons ? Math.max(edge, windowButtonsRight) : edge}px; {textStyle}"
+        style="top: {top}px; left: {edge}px; {textStyle}"
       >
         {#if spreadCorners.left}
           <span class="tabular-nums">{spreadCorners.left}</span>
@@ -2240,7 +2194,6 @@
       class="modal-box relative flex h-screen max-h-none w-screen max-w-none flex-col overflow-hidden rounded-none bg-base-100/95 p-0 backdrop-blur-lg"
     >
       <div
-        style={macChrome ? "padding-top: 2.0625rem" : ""}
         class="flex items-center justify-between border-b border-base-300 px-4 py-2.5"
       >
         <h3 class="text-base font-semibold">Gallery</h3>
@@ -2365,7 +2318,6 @@
       class="absolute inset-y-0 z-[2203] flex w-88 flex-col overflow-hidden border-base-300 bg-base-100/80 backdrop-blur transition-all duration-300 {side === 'right' ? 'right-0 border-l' : 'left-0 border-r'} {panelOpen ? 'pointer-events-auto translate-x-0 opacity-100' : `pointer-events-none opacity-0 ${side === 'right' ? 'translate-x-full' : '-translate-x-full'}`}"
     >
       <header
-        style={macChrome ? "padding-top: 2.0625rem" : ""}
         class="flex shrink-0 items-center justify-between border-b border-base-300 px-4 py-2.5"
       >
         <h2 class="text-sm font-semibold">{panel}</h2>

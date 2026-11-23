@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Hoshi Reader",
+  "productName": "Hoshi",
   "identifier": "de.manhhao.hoshi",
   "build": {
     "frontendDist": "../dist",
@@ -12,10 +12,10 @@
     "windows": [
       {
         "create": false,
-        "title": "Hoshi Reader",
+        "title": "Hoshi",
         "theme": "Light",
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
+        "decorations": false,
+        "shadow": true,
         "width": 1280,
         "height": 800,
         "minWidth": 640,
@@ -32,7 +32,6 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/icon.png",
@@ -46,17 +45,6 @@
     "macOS": {
       "signingIdentity": "Developer ID Application: Manh-Hao Steffen Pham (GPLBDQ2MBT)",
       "minimumSystemVersion": "15.0"
-    }
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNGNDAyNDMwNUEzRUE1REIKUldUYnBUNWFNQ1JBUDJnaEt5NGhiWmp0L09ELzZnNHhtbHlzSEF5bEpFQ1dWdHRHMHRsUlk3UFkK",
-      "endpoints": [
-        "https://github.com/Manhhao/Hoshi-Reader-Desktop/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
     }
   }
 }

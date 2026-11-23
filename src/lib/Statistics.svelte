@@ -40,7 +40,7 @@
 
 <svelte:window onfocus={() => model.refreshDate()} />
 
-<div class="flex h-full flex-col bg-base-100">
+<div class="hoshi-canvas hoshi-canvas--lines flex h-full flex-col">
   <PageHeader title="Statistics">
     {#snippet actions()}
       <button
@@ -53,22 +53,22 @@
     {/snippet}
   </PageHeader>
 
-  <main class="min-h-0 flex-1 overflow-y-auto">
-    <div class="@container mx-auto flex max-w-6xl flex-col gap-5 p-4">
-      <div class="grid items-start gap-5 @5xl:grid-cols-2">
-        <section class="flex flex-col gap-2">
-          <h2 class="text-xs font-medium tracking-wide text-base-content/60 uppercase">
+  <main class="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+    <div class="@container mx-auto flex max-w-6xl flex-col gap-6 py-6 pl-6 pr-3.5">
+      <div class="grid items-start gap-6 @5xl:grid-cols-2">
+        <section class="flex flex-col gap-3">
+          <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">
             Daily Goal
           </h2>
           <DailyGoal {model} />
         </section>
 
-        <section class="flex flex-col gap-2">
-          <h2 class="text-xs font-medium tracking-wide text-base-content/60 uppercase">
+        <section class="flex flex-col gap-3">
+          <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">
             Reading Time
           </h2>
           <ReadingTime {model} />
-          <div class="card border border-base-300 bg-base-100">
+          <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
             <ul class="list">
               <li class="list-row items-center py-2.5">
                 <span class="list-col-grow text-sm">Characters Read</span>
@@ -96,9 +96,9 @@
       </div>
 
       {#if books.length > 0}
-        <section class="flex flex-col gap-2">
-          <h2 class="text-xs font-medium tracking-wide text-base-content/60 uppercase">Books</h2>
-          <div class="card overflow-hidden border border-base-300 bg-base-100">
+        <section class="flex flex-col gap-3">
+          <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Books</h2>
+          <div class="card overflow-hidden rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
             <ul class="list">
               {#each visible as book (book.id)}
                 <li class="list-row items-center has-[button.list-col-grow:hover]:bg-base-200">
@@ -124,7 +124,7 @@
                     </div>
                     <div class="mt-1 flex items-center gap-2 pr-2">
                       <span
-                        class="h-[5px] rounded-full bg-base-content/25"
+                        class="h-[5px] rounded-full bg-primary"
                         style="width: {longest > 0
                           ? Math.max((book.readingTime / longest) * 60, 2)
                           : 0}%"

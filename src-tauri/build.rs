@@ -4,10 +4,42 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
+    load_sync_credentials();
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "macos" {
         build_swift();
     }
     tauri_build::build();
+}
+
+/// Reads the Google Drive OAuth client from the gitignored `.env` at the
+/// project root, so the credentials never live in the source tree.
+fn load_sync_credentials() {
+    for path in ["../.env", "../.env.local"] {
+        let Ok(contents) = fs::read_to_string(path) else {
+            continue;
+        };
+        println!("cargo:rerun-if-changed={path}");
+        for line in contents.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let Some((key, value)) = line.split_once('=') else {
+                continue;
+            };
+            let key = key.trim();
+            if !matches!(key, "HOSHI_GOOGLE_CLIENT_ID" | "HOSHI_GOOGLE_CLIENT_SECRET") {
+                continue;
+            }
+            // `.env` wins over an inherited environment: `tauri dev` exports
+            // the values it read at startup, which would otherwise pin stale
+            // credentials across rebuilds.
+            let value = value.trim().trim_matches('"').trim_matches('\'');
+            if !value.is_empty() {
+                println!("cargo:rustc-env={key}={value}");
+            }
+        }
+    }
 }
 
 fn build_swift() {

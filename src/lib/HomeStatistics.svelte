@@ -40,9 +40,9 @@
     : "");
 </script>
 
-<section class="@container/activity rounded-lg border border-base-300 bg-base-200/20 p-4">
+<section class="@container/activity rounded-[1.75rem] border border-base-content/10 bg-base-200/40 p-5">
   <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
-    <h2 class="text-sm font-medium">Activity</h2>
+    <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Activity</h2>
     <button class="btn btn-ghost btn-xs gap-1 text-base-content/60" onclick={onOpen}>
       View statistics <ArrowUpRight class="size-3.5" />
     </button>

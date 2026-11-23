@@ -79,7 +79,7 @@
   );
 </script>
 
-<div class="card border border-base-300 bg-base-100">
+<div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
   <div class="card-body gap-0 p-4">
     <div class="join w-full">
       {#each periods as period (period)}

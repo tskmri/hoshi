@@ -87,13 +87,13 @@
   onresize={() => (hoveredDay = null)}
 />
 
-<div class="card border border-base-300 bg-base-100">
+<div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
   <div class="card-body gap-4 p-4">
     <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
       <GoalGauge {model} />
 
       <div
-        class="grid min-w-[19rem] flex-1 grid-cols-2 rounded-box border border-base-300 [&>*]:border-base-300 [&>*:nth-child(odd)]:border-e [&>*:nth-child(-n+2)]:border-b"
+        class="grid min-w-[19rem] flex-1 grid-cols-2 rounded-box border border-base-content/10 [&>*]:border-base-content/10 [&>*:nth-child(odd)]:border-e [&>*:nth-child(-n+2)]:border-b"
       >
         <div class="flex flex-col px-4 py-3">
           <span class="text-xs text-base-content/60">Current Streak</span>

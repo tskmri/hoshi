@@ -7,7 +7,8 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { Menu, Submenu, type MenuOptions } from "@tauri-apps/api/menu";
+  import ContextMenu from "./ContextMenu.svelte";
+  import type { MenuEntry } from "./contextMenu";
   import { ask, message } from "@tauri-apps/plugin-dialog";
   import {
     Archive,
@@ -26,7 +27,6 @@
   import BookCover from "./BookCover.svelte";
   import PageHeader from "./PageHeader.svelte";
   import ReadingOverview from "./ReadingOverview.svelte";
-  import Titlebar from "./Titlebar.svelte";
   import ViewMenu from "./ViewMenu.svelte";
   import { series } from "./series";
   import { resetSeriesOrder, saveSeries, seriesSort, seriesStore, setSeriesOrder, setSeriesSort } from "./seriesStore.svelte";
@@ -247,9 +247,15 @@
     }
   }
 
-  async function popupMenu(items: MenuOptions["items"]) {
-    const menu = await Menu.new({ items });
-    await menu.popup();
+  let menu = $state<{ x: number; y: number; entries: MenuEntry[] } | null>(null);
+
+  function openMenuAt(x: number, y: number, entries: MenuEntry[]) {
+    menu = { x, y, entries };
+  }
+
+  function openMenuBelow(target: EventTarget & Element, entries: MenuEntry[]) {
+    const rect = target.getBoundingClientRect();
+    openMenuAt(rect.left, rect.bottom + 4, entries);
   }
 
   async function moveTo(ids: string[], name: string | null) {
@@ -257,12 +263,12 @@
     clearSelection();
   }
 
-  function moveItems(ids: string[]) {
+  function moveItems(ids: string[]): MenuEntry[] {
     return [
-      { id: "move-none", text: "None", action: () => moveTo(ids, null) },
-      ...shelves.list.map((shelf) => ({ id: `move-${shelf.name}`, text: shelf.name, action: () => moveTo(ids, shelf.name) })),
-      { item: "Separator" as const },
-      { id: "move-new", text: "New Shelf…", action: () => openNewShelf(ids) },
+      { kind: "item", text: "None", action: () => moveTo(ids, null) },
+      ...shelves.list.map((shelf): MenuEntry => ({ kind: "item", text: shelf.name, action: () => moveTo(ids, shelf.name) })),
+      { kind: "separator" },
+      { kind: "item", text: "New Shelf…", action: () => openNewShelf(ids) },
     ];
   }
 
@@ -378,7 +384,7 @@
     clearSelection();
   }
 
-  async function markItems(books: BookMetadata[]) {
+  async function markItems(books: BookMetadata[]): Promise<MenuEntry[]> {
     const canMarkUnread = await Promise.all(books.map(async (book) => {
       const [bookmark, sessions] = await Promise.all([
         invoke<Bookmark | null>("load_bookmark", { id: book.id }),
@@ -389,12 +395,12 @@
         Object.values(sessions).some((session) => session.value !== null));
     }));
     const unread = books.filter((_, index) => canMarkUnread[index]);
-    const unreadItem = { id: "mark-unread", text: "Unread", enabled: unread.length > 0, action: () => markUnread(unread) };
+    const unreadItem: MenuEntry = { kind: "item", text: "Unread", disabled: unread.length === 0, action: () => markUnread(unread) };
     if (books.length === 1 && isCompleted(books[0])) {
-      return [{ id: "completion-date", text: "Completion Date…", action: () => openCompletion(books) }, unreadItem];
+      return [{ kind: "item", text: "Completion Date…", action: () => openCompletion(books) }, unreadItem];
     }
     const read = books.filter((book) => !book.epubRemoved && !isCompleted(book) && (book.hasBookInfo || (book.characterCount ?? 0) > 0));
-    return [{ id: "mark-read", text: "Read…", enabled: read.length > 0, action: () => openCompletion(read) }, unreadItem];
+    return [{ kind: "item", text: "Read…", disabled: read.length === 0, action: () => openCompletion(read) }, unreadItem];
   }
 
   let renameDialog = $state<HTMLDialogElement>();
@@ -451,25 +457,25 @@
     e.preventDefault();
     if (isSelecting) {
       if (!selectedIds.includes(book.id)) return;
-      await popupMenu([
-        await Submenu.new({ text: "Move to", items: moveItems(selectedIds) }),
-        await Submenu.new({ text: "Mark as", items: await markItems(selectedBooks) }),
-        { id: "delete-selected", text: "Delete", action: deleteSelected },
+      openMenuAt(e.clientX, e.clientY, [
+        { kind: "item", text: "Move to", children: moveItems(selectedIds) },
+        { kind: "item", text: "Mark as", children: await markItems(selectedBooks) },
+        { kind: "item", text: "Delete", danger: true, action: deleteSelected },
       ]);
       return;
     }
-    await popupMenu([
+    openMenuAt(e.clientX, e.clientY, [
       ...(syncConfig.enableSync && !book.epub && !book.epubRemoved
-        ? [{ id: `download-${book.id}`, text: "Download", action: () => queueDownloads([book]) }]
+        ? [{ kind: "item" as const, text: "Download", action: () => queueDownloads([book]) }]
         : []),
-      await Submenu.new({ text: "Move to", items: moveItems([book.id]) }),
-      await Submenu.new({ text: "Mark", items: await markItems([book]) }),
-      { id: `rename-${book.id}`, text: "Rename", action: () => openRename(book) },
-      { id: `author-${book.id}`, text: "Edit Author", action: () => openEditAuthor(book) },
+      { kind: "item", text: "Move to", children: moveItems([book.id]) },
+      { kind: "item", text: "Mark", children: await markItems([book]) },
+      { kind: "item", text: "Rename", action: () => openRename(book) },
+      { kind: "item", text: "Edit Author", action: () => openEditAuthor(book) },
       ...(shellConfig.showSeries
-        ? [{ id: `series-${book.id}`, text: "Edit Series", action: () => openEditSeries(book) }]
+        ? [{ kind: "item" as const, text: "Edit Series", action: () => openEditSeries(book) }]
         : []),
-      { id: `delete-${book.id}`, text: "Delete", action: () => deleteBooks([book], `Delete "${displayTitle(book)}"?`) },
+      { kind: "item", text: "Delete", danger: true, action: () => deleteBooks([book], `Delete "${displayTitle(book)}"?`) },
     ]);
   }
 
@@ -507,7 +513,7 @@
   <div class="flex h-4 items-center gap-1">
     {#if bar}
       <progress
-        class="progress h-1 flex-1 text-base-content/60"
+        class="progress h-1 flex-1 text-accent"
         value={Math.min(book.progress, 1) * 100}
         max="100"
       ></progress>
@@ -525,7 +531,7 @@
     onclick={(e) => selectBook(book, e)}
     oncontextmenu={(e) => showMenu(book, e)}
     onpointerdown={(e) => startDrag(e, index)}
-    class="group -m-2 flex flex-col gap-1 rounded-lg p-2 text-left transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 {canReorder
+    class="group -m-2 flex flex-col gap-1 rounded-2xl p-2 text-left transition-colors hover:bg-accent/10 focus-visible:bg-accent/10 {canReorder
       ? 'cursor-grab'
       : ''} {sort.index === index ? 'opacity-40' : ''}"
   >
@@ -534,7 +540,7 @@
       title={displayTitle(book)}
       author={book.author}
       src={book.cover ? schemeUrl("cover", book.id) + "?w=512" : null}
-      frontClass="bg-base-200 {isSelecting && selectedIds.includes(book.id) ? 'outline-2 outline-offset-2 outline-primary' : ''}"
+      frontClass="bg-base-200 {isSelecting && selectedIds.includes(book.id) ? 'outline-2 outline-offset-2 outline-accent' : ''}"
     >
       {#if isSelecting && selectedIds.includes(book.id)}
         <CircleCheck class="absolute right-1.5 top-1.5 size-[22px] rounded-full bg-blue-500 text-white" />
@@ -555,7 +561,7 @@
       </div>
     {/if}
     {#if source.kind === "home" || shellConfig.bookshelfShowTitle}
-      <span class="{downloadingBooks[book.id] === undefined ? 'line-clamp-2' : 'line-clamp-1'} text-sm leading-snug transition-colors group-hover:text-secondary group-focus-visible:text-secondary">
+      <span class="{downloadingBooks[book.id] === undefined ? 'line-clamp-2' : 'line-clamp-1'} text-sm leading-snug transition-colors group-hover:text-base-content group-focus-visible:text-base-content">
         {#if book.epubRemoved}
           <Archive class="mb-0.5 inline size-3.5" />
         {:else if !book.epub}
@@ -657,10 +663,8 @@
   </tr>
 {/snippet}
 
-<div class="@container flex h-full flex-col bg-base-100">
-  {#if source.kind === "home"}
-    <Titlebar />
-  {:else}
+<div class="@container hoshi-canvas hoshi-canvas--lines flex h-full flex-col">
+  {#if source.kind !== "home"}
     <PageHeader
       title={isSelecting ? `${selectedIds.length} Selected` : sourceTitle(source)}
       subtitle={!isSelecting && shelfCharacters.total > 0 && (shellConfig.bookshelfLayout === "List" || shellConfig.bookshelfShowCharacters)
@@ -669,11 +673,11 @@
     >
       {#snippet actions()}
         {#if isSelecting}
-          <button class="btn btn-ghost btn-sm" disabled={selectedIds.length === 0} onclick={() => popupMenu(moveItems(selectedIds))}>
+          <button class="btn btn-ghost btn-sm" disabled={selectedIds.length === 0} onclick={(e) => openMenuBelow(e.currentTarget, moveItems(selectedIds))}>
             <Folder class="size-4" />
             Move to
           </button>
-          <button class="btn btn-ghost btn-sm" disabled={selectedIds.length === 0} onclick={async () => popupMenu(await markItems(selectedBooks))}>
+          <button class="btn btn-ghost btn-sm" disabled={selectedIds.length === 0} onclick={async (e) => openMenuBelow(e.currentTarget, await markItems(selectedBooks))}>
             <CircleCheck class="size-4" />
             Mark as
           </button>
@@ -695,7 +699,7 @@
           </label>
           <ViewMenu {option} {reversed} custom={canCustom} onpick={sortBy} />
           <button class="btn btn-ghost btn-sm btn-square" title="Select" onclick={() => (isSelecting = true)}><ListChecks class="size-4" /></button>
-          <button class="btn btn-neutral btn-sm btn-square" onclick={onImport}>
+          <button class="btn btn-sm btn-square rounded-full border-0 bg-accent text-accent-content hover:bg-accent/90" onclick={onImport}>
             <Plus class="size-4" />
           </button>
         {/if}
@@ -722,8 +726,8 @@
       No Results
     </div>
   {:else if shellConfig.bookshelfLayout === "List"}
-    <div class="flex-1 overflow-y-auto">
-      <table class="table table-sm table-pin-rows table-fixed [&_:is(th,td):first-child]:ps-5 [&_:is(th,td):last-child]:pe-5">
+    <div class="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+      <table class="table table-sm table-pin-rows table-fixed [&_:is(th,td):first-child]:ps-6 [&_:is(th,td):last-child]:pe-3.5">
         <thead>
           <tr>
             {@render sortHeader("Title", "Title")}
@@ -743,7 +747,7 @@
   {:else}
     <div class="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
       <div
-        class="grid content-start gap-5 p-5"
+        class="grid content-start gap-6 p-6 pr-3.5"
         style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));"
         use:sort.container
       >
@@ -896,4 +900,8 @@
       <button>close</button>
     </form>
   </dialog>
+
+  {#if menu}
+    <ContextMenu x={menu.x} y={menu.y} entries={menu.entries} onclose={() => (menu = null)} />
+  {/if}
 </div>

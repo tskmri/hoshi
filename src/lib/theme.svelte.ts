@@ -7,7 +7,7 @@ media.addEventListener("change", (e) => {
 });
 
 function schemeOf(theme: ThemeName): "light" | "dark" | null {
-  if (theme === "Light" || theme === "Sepia") return "light";
+  if (theme === "Light") return "light";
   if (theme === "Dark") return "dark";
   return null;
 }
@@ -18,7 +18,6 @@ function customTheme() {
 
 export function chromeOverride(): "light" | "dark" | null {
   if (readerConfig.theme === "Custom") return schemeOf(customTheme().uiTheme);
-  if (readerConfig.theme === "Sepia" && readerConfig.sepiaInvertInDark) return null;
   return schemeOf(readerConfig.theme);
 }
 
@@ -26,35 +25,20 @@ export function resolvedScheme(): "light" | "dark" {
   return chromeOverride() ?? (os.dark ? "dark" : "light");
 }
 
-function sepiaInverted(): boolean {
-  return readerConfig.theme === "Sepia" && readerConfig.sepiaInvertInDark && os.dark;
-}
-
-function sepiaActive(): boolean {
-  return (
-    readerConfig.theme === "Sepia" ||
-    (readerConfig.theme === "System" && readerConfig.systemLightSepia && !os.dark)
-  );
-}
-
 export function readerBackground(): string {
-  if (sepiaInverted()) return "#18150c";
-  if (sepiaActive()) return "#f2e2c9";
   if (readerConfig.theme === "Custom") return customTheme().backgroundColor;
-  return resolvedScheme() === "dark" ? "#000000" : "#ffffff";
+  return resolvedScheme() === "dark" ? "#121212" : "#ffffff";
 }
 
 export function readerTextColor(): string | null {
-  if (sepiaInverted()) return "#f2e2c9";
-  if (sepiaActive()) return "#332a1b";
-  return readerConfig.theme === "Custom" ? customTheme().textColor : null;
+  if (readerConfig.theme === "Custom") return customTheme().textColor;
+  return resolvedScheme() === "dark" ? "#d8d9de" : null;
 }
 
 export function infoColor(): string | null {
   return readerConfig.theme === "Custom" ? customTheme().infoColor : null;
 }
 
-export function chromeTheme(reading: boolean): "hoshi-light" | "hoshi-dark" | "hoshi-sepia" {
-  if (reading && sepiaActive() && !sepiaInverted()) return "hoshi-sepia";
+export function chromeTheme(): "hoshi-light" | "hoshi-dark" {
   return resolvedScheme() === "dark" ? "hoshi-dark" : "hoshi-light";
 }

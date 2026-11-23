@@ -15,6 +15,7 @@
   let lineHeight = Number(params.get("lh"));
   let charSpacing = Number(params.get("cs"));
   let paraSpacing = Number(params.get("ps"));
+  let fontWeight = Number(params.get("fw")) || 300;
   let spreadGap = Number(params.get("sp"));
   const furiganaMode = params.get("fm");
   const paragraphMode = params.get("pm") === "1";
@@ -126,13 +127,22 @@
         ${columns}
         column-fill: auto !important;
         -webkit-text-size-adjust: none !important;
-        font-family: ${fontName ? `"${fontName}", ` : ""}"Hiragino Mincho ProN", "Yu Mincho", serif !important;
+        font-family: ${fontName ? `"${fontName}", ` : ""}"Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif !important;
+        font-weight: ${fontWeight} !important;
+        font-variation-settings: "wght" ${fontWeight} !important;
+        font-synthesis: none !important;
         ${justify ? "" : "text-align: start !important; hanging-punctuation: allow-end !important; line-break: strict !important;"}
         ${advanced ? `line-height: ${lineHeight} !important; letter-spacing: ${charSpacing / 100}em !important;` : ""}
         padding: ${paddingY / 2}vh ${side} !important;
         ${spread && vertical && !chromium ? `padding-left: calc(50vw + ${side}) !important;` : ""}
         ${overlap ? `padding-bottom: calc(${paddingY / 2}vh + ${overlap}px) !important;` : ""}
         ${fontSize ? `font-size: ${fontSize}px !important;` : ""}
+      }
+      body * {
+        font-family: ${fontName ? `"${fontName}", ` : ""}"Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif !important;
+        font-weight: ${fontWeight} !important;
+        font-variation-settings: "wght" ${fontWeight} !important;
+        font-synthesis: none !important;
       }
       ${avoidBreak ? "p { break-inside: avoid !important; -webkit-column-break-inside: avoid !important; }" : ""}
       ${
@@ -522,6 +532,7 @@
     lineHeight = m.lh;
     charSpacing = m.cs;
     paraSpacing = m.ps;
+    fontWeight = m.fw || fontWeight;
     centerText = m.ct;
     spreadGap = m.sp;
     applyStyle();

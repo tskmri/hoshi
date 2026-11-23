@@ -1,8 +1,7 @@
 import { persisted } from "./persisted.svelte";
-import { isMac } from "./platform";
 
 export type FuriganaMode = "Off" | "Dimmed" | "Toggle" | "Hidden";
-export type ThemeName = "System" | "Light" | "Dark" | "Sepia" | "Custom";
+export type ThemeName = "System" | "Light" | "Dark" | "Custom";
 export type UiTheme = "System" | "Light" | "Dark";
 export type ProgressCount = "Off" | "Characters" | "Pages";
 
@@ -14,16 +13,19 @@ export type CustomTheme = {
   infoColor: string;
 };
 
-export const defaultFonts = isMac
-  ? ["Hiragino Mincho ProN", "Hiragino Kaku Gothic ProN"]
-  : ["Yu Mincho", "Yu Gothic", "Noto Serif JP", "Noto Sans JP"];
+export const defaultFonts = [
+  "Noto Serif JP",
+  "Noto Sans JP",
+  "Hiragino Mincho ProN",
+  "Hiragino Kaku Gothic ProN",
+  "Yu Mincho",
+  "Yu Gothic",
+];
 
 export type ReaderConfig = {
   theme: ThemeName;
   selectedFont: string;
   selectedFontFile: string;
-  systemLightSepia: boolean;
-  sepiaInvertInDark: boolean;
   customThemes: CustomTheme[];
   customTheme: number;
   verticalWriting: boolean;
@@ -37,6 +39,7 @@ export type ReaderConfig = {
   clickToAdvance: boolean;
   paragraphHideBookmark: boolean;
   fontSize: number;
+  fontWeight: number;
   furiganaMode: FuriganaMode;
   horizontalPadding: number;
   verticalPadding: number;
@@ -71,8 +74,6 @@ const defaults: ReaderConfig = {
   theme: "System",
   selectedFont: defaultFonts[0],
   selectedFontFile: "",
-  systemLightSepia: false,
-  sepiaInvertInDark: false,
   customThemes: [{
     name: "Default",
     uiTheme: "System",
@@ -91,7 +92,8 @@ const defaults: ReaderConfig = {
   textSpeed: 35,
   clickToAdvance: false,
   paragraphHideBookmark: true,
-  fontSize: 22,
+  fontSize: 35,
+  fontWeight: 300,
   furiganaMode: "Off",
   horizontalPadding: 0,
   verticalPadding: 0,
@@ -127,12 +129,15 @@ const store = persisted<ReaderConfig>("reader.config", defaults);
 export const readerConfig = store.config;
 export const saveReaderConfig = store.save;
 
-type LegacyReaderConfig = ReaderConfig & {
+type LegacyReaderConfig = Omit<ReaderConfig, "theme"> & {
+  theme: string;
   showCharacters?: boolean;
   uiTheme?: UiTheme;
   customBackgroundColor?: string;
   customTextColor?: string;
   customInfoColor?: string;
+  systemLightSepia?: boolean;
+  sepiaInvertInDark?: boolean;
 };
 
 const legacy = readerConfig as LegacyReaderConfig;
@@ -156,3 +161,15 @@ if (legacy.showCharacters !== undefined) {
   delete legacy.showCharacters;
   saveReaderConfig();
 }
+
+if (
+  legacy.theme === "Sepia" ||
+  legacy.systemLightSepia !== undefined ||
+  legacy.sepiaInvertInDark !== undefined
+) {
+  if (legacy.theme === "Sepia") legacy.theme = "Light";
+  delete legacy.systemLightSepia;
+  delete legacy.sepiaInvertInDark;
+  saveReaderConfig();
+}
+

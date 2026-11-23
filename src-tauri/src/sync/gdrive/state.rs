@@ -10,8 +10,8 @@ use crate::sync::app;
 use crate::sync::client::{self, Content, GoogleDriveError, GoogleDriveFile};
 use crate::sync::gdrive::handler as drive;
 use crate::sync::gdrive::manager::{
-    Phase, publish, record_book, reset_connection, save_cache, set_attach_pending, shared,
-    state_folder, store,
+    Phase, book_folder, publish, record_book, reset_connection, save_cache, set_attach_pending,
+    shared, state_folder, store,
 };
 use crate::sync::model::{SyncBook, SyncError, SyncResult, SyncShelves, sync_format};
 use crate::sync::storage::SyncStorage;
@@ -96,6 +96,7 @@ pub(super) async fn run(book: Option<BookMetadata>) -> SyncResult<()> {
 
 async fn sync_state(book: Option<BookMetadata>) -> SyncResult<()> {
     task::check_cancellation()?;
+    ensure_layout().await?;
     shared().error_message = None;
     publish();
 
@@ -182,7 +183,7 @@ async fn changes() -> SyncResult<RemoteChanges> {
         if page.changes.iter().any(|change| {
             change.file.as_ref().is_some_and(|file| {
                 file.is_folder()
-                    && (file.name == "Hoshi Reader"
+                    && (drive::is_root(&file.name)
                         || file
                             .parents
                             .as_ref()
@@ -221,6 +222,34 @@ async fn changes() -> SyncResult<RemoteChanges> {
             }
         }
     }
+}
+
+async fn ensure_layout() -> SyncResult<()> {
+    let (state, books) = (state_folder(), book_folder());
+    if state.is_empty() || books.is_empty() {
+        return load_layout().await;
+    }
+    if drive::exists(&state).await? && drive::exists(&books).await? {
+        return Ok(());
+    }
+    invalidate_layout()?;
+    load_layout().await
+}
+
+fn invalidate_layout() -> SyncResult<()> {
+    {
+        let mut manager = shared();
+        manager.cache.root.clear();
+        manager.cache.state_folder.clear();
+        manager.cache.book_folder.clear();
+        manager.cache.cursor = None;
+        manager.cache.book_versions.clear();
+        manager.cache.book_folders.clear();
+        manager.cache.upload_sessions.clear();
+        manager.remote_books.clear();
+    }
+    store().reset_sync_state()?;
+    save_cache()
 }
 
 async fn load_layout() -> SyncResult<()> {

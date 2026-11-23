@@ -23,7 +23,6 @@ mod statistics;
 mod sync;
 mod transcriber;
 mod ttu_statistics;
-mod updater;
 mod wheel;
 #[cfg(target_os = "macos")]
 mod writing_tools;
@@ -41,12 +40,12 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(
                     tauri_plugin_window_state::StateFlags::all()
-                        & !tauri_plugin_window_state::StateFlags::VISIBLE,
+                        & !tauri_plugin_window_state::StateFlags::VISIBLE
+                        & !tauri_plugin_window_state::StateFlags::DECORATIONS,
                 )
                 .build(),
         )
@@ -199,9 +198,7 @@ pub fn run() {
             sync::gdrive::gdrive_published_epub,
             sync::gdrive::gdrive_download_all,
             sync::gdrive::gdrive_download_book,
-            sync::open_external,
-            updater::check_update,
-            updater::install_update
+            sync::open_external
         ])
         .setup(|app| {
             #[cfg(windows)]

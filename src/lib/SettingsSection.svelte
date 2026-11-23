@@ -6,13 +6,13 @@
 
 {#if compact}
   <section class="flex flex-col gap-3">
-    <h3 class="text-xs font-medium tracking-wide text-base-content/50 uppercase">{title}</h3>
+    <h3 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">{title}</h3>
     {@render children()}
   </section>
 {:else}
-  <div class="card border border-base-300 bg-base-100">
+  <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
     <div class="card-body gap-4">
-      <h2 class="card-title text-base">{title}</h2>
+      <h2 class="card-title text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">{title}</h2>
       {@render children()}
     </div>
   </div>

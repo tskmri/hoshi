@@ -1459,7 +1459,7 @@ async function fetchAudioList(entryIndex) {
     const list = [];
     const seen = new Set();
     for (const source of sources) {
-        const entries = await fetchAudioSources(source.url, entry.expression, entry.reading);
+        const entries = await fetchAudioSources(source.url, entry.expression, entry.reading || entry.expression);
         const sourceName = source.name || 'Audio';
         for (const item of entries) {
             if (seen.has(item.url)) continue;
@@ -1553,7 +1553,7 @@ async function playEntryAudio(entryIndex, sourceIndex = null) {
     if (sourceIndex !== null) {
         audioUrls[entryIndex] = (await fetchAudioList(entryIndex))[sourceIndex]?.url || null;
     } else if (!audioUrls[entryIndex]) {
-        audioUrls[entryIndex] = await fetchAudioUrl(entry.expression, entry.reading);
+        audioUrls[entryIndex] = await fetchAudioUrl(entry.expression, entry.reading || entry.expression);
     }
     if (!audioUrls[entryIndex] || !playWordAudio(audioUrls[entryIndex])) {
         updateButtonSlot(audioSlot, { state: 'error' });

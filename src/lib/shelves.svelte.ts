@@ -128,7 +128,7 @@ export function shelfBooks(books: BookMetadata[], source: ShelfSource) {
 export function sourceTitle(source: ShelfSource) {
   if ("name" in source) return source.name;
   if (source.kind === "completed") return "Completed";
-  return source.kind === "unshelved" ? "Unshelved" : "All Books";
+  return source.kind === "unshelved" ? "Unshelved" : "Library";
 }
 
 export function sameSource(a: ShelfSource, b: ShelfSource) {

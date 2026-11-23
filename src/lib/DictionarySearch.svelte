@@ -226,10 +226,26 @@
   invoke<FontInfo[]>("list_fonts").then((fonts) => (importedFonts = fonts));
 </script>
 
-<div class="flex h-full flex-col bg-base-100">
+<div class="hoshi-canvas flex h-full flex-col">
   <PageHeader title="Dictionary">
-    <label class="input input-sm min-w-0 flex-1">
-      <Search class="size-4 text-base-content/50" />
+    {#snippet actions()}
+      <button
+        class="btn btn-sm btn-square rounded-full border transition-colors {dictConfig.clipboardMonitor
+          ? 'border-accent/40 bg-accent/10 text-accent'
+          : 'border-base-content/10 bg-base-200/50 text-base-content/60 hover:text-base-content'}"
+        title="Clipboard Monitor"
+        onclick={() => {
+          dictConfig.clipboardMonitor = !dictConfig.clipboardMonitor;
+          saveDictConfig();
+        }}
+      >
+        <ClipboardPaste class="size-4" />
+      </button>
+    {/snippet}
+    <label
+      class="input ml-2 h-9 w-full max-w-lg rounded-full border border-base-content/10 bg-base-200/50 px-4 text-sm focus-within:border-accent/40"
+    >
+      <Search class="size-4 text-base-content/45" />
       <input
         type="search"
         lang="ja"
@@ -244,16 +260,6 @@
         }}
       />
     </label>
-    <button
-      class="btn btn-sm btn-square {dictConfig.clipboardMonitor ? 'btn-neutral btn-active' : 'btn-ghost'}"
-      title="Clipboard Monitor"
-      onclick={() => {
-        dictConfig.clipboardMonitor = !dictConfig.clipboardMonitor;
-        saveDictConfig();
-      }}
-    >
-      <ClipboardPaste class="size-4" />
-    </button>
   </PageHeader>
 
   <div class="min-h-0 flex-1" bind:this={paneEl}>

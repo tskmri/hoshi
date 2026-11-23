@@ -4,10 +4,9 @@
     ["dictionaries", "Dictionaries"],
     ["anki", "Anki"],
     ["audio", "Audio"],
-    ["syncing", "Syncing"],
+    ["syncing", "Sync"],
     ["input", "Input"],
     ["sasayaki", "Sasayaki"],
-    ["backup", "Backup"],
     ["about", "About"],
   ] as const;
   export type SettingsTab = (typeof settingsTabs)[number][0];
@@ -16,7 +15,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
+  import { ask, message, open } from "@tauri-apps/plugin-dialog";
   import {
     ALargeSmall,
     ArrowDown,
@@ -44,12 +43,9 @@
   import { schemeUrl } from "./scheme";
   import {
     dictConfig,
-    dictionaryUpdate,
-    dictionaryUpdateIntervals,
     loadCollapsedDictionaries,
     saveCollapsedDictionaries,
     saveDictConfig,
-    updateDictionaries,
     type CollapseMode,
   } from "./dictConfig.svelte";
   import { dropdownFlip } from "./dropdownFlip";
@@ -372,8 +368,6 @@
   let connecting = $state(false);
   let ankiReachable = $state(false);
   let ankiError = $state("");
-  let backupBusy = $state<BackupFolder | null>(null);
-  let backupError = $state("");
   let audioNameInput = $state("");
   let audioUrlInput = $state("");
   const localAudioName = $derived(anki?.localAudioPath?.split(/[\\/]/).pop() || "database");
@@ -460,94 +454,8 @@
 
   const visible = $derived(dictionaries[selected]);
 
-  const updatableTitles = $derived.by(() => {
-    const titles: string[] = [];
-    for (const kind of Object.keys(labels) as DictionaryType[]) {
-      for (const dict of dictionaries[kind]) {
-        if (dict.isUpdatable && !titles.includes(dict.title)) titles.push(dict.title);
-      }
-    }
-    return titles;
-  });
-
-  const updateMessage = $derived(
-    `This will check for and install updates for these dictionaries:\n${updatableTitles.join("\n")}`,
-  );
-
-  const lastUpdate = $derived(
-    dictConfig.lastDictionaryUpdate === null
-      ? "Never"
-      : new Date(dictConfig.lastDictionaryUpdate).toLocaleString(),
-  );
-
-  async function runUpdate() {
-    error = "";
-    try {
-      const summary = await updateDictionaries();
-      if (summary?.failed.length) error = summary.failed.join("\n");
-    } catch (err) {
-      error = String(err);
-    }
-    await refresh();
-  }
-
   async function refresh() {
     dictionaries = await invoke<DictionaryLists>("list_dictionaries");
-  }
-
-  type BackupFolder = "Books" | "Dictionaries";
-
-  function backupFileName(folder: BackupFolder) {
-    const date = new Date();
-    const pad = (value: number) => String(value).padStart(2, "0");
-    return `${folder}_${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}.hoshi`;
-  }
-
-  async function backupStorage(folder: BackupFolder) {
-    const destination = await save({
-      defaultPath: backupFileName(folder),
-      filters: [{ name: "Hoshi Backup", extensions: ["hoshi"] }],
-    });
-    if (!destination) return;
-    backupBusy = folder;
-    backupError = "";
-    try {
-      await invoke("backup_folder", { folder, destination });
-    } catch (error) {
-      backupError = String(error);
-    } finally {
-      backupBusy = null;
-    }
-  }
-
-  async function restoreStorage(folder: BackupFolder) {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "Hoshi Backup", extensions: ["hoshi"] }],
-    });
-    if (!selected) return;
-    backupBusy = folder;
-    backupError = "";
-    try {
-      await invoke("restore_folder", { folder, path: selected });
-      if (folder === "Books") {
-        invoke("gdrive_sync_start");
-        await onReload();
-      } else {
-        await refresh();
-        await loadCollapsedDictionaries();
-      }
-    } catch (error) {
-      if (folder === "Books") {
-        syncConfig.enableSync = false;
-        saveSyncConfig();
-        await configureSync();
-        invoke("gdrive_sync_start");
-      }
-      backupError = String(error);
-    } finally {
-      backupBusy = null;
-    }
   }
 
   async function loadAnki() {
@@ -709,7 +617,6 @@
 
   let collapsedDialog = $state<HTMLDialogElement | null>(null);
   let categorizeDialog = $state<HTMLDialogElement | null>(null);
-  let updateDialog = $state<HTMLDialogElement | null>(null);
   let transfersDialog = $state<HTMLDialogElement | null>(null);
 
   function addAudioSource() {
@@ -898,58 +805,20 @@
   oncontextmenucapture={(e) => bindingKey && e.preventDefault()}
 />
 
-<div class="flex h-full flex-col bg-base-100">
+<div class="hoshi-canvas flex h-full flex-col">
   <PageHeader title={tabLabel} />
 
-  <main class="min-h-0 flex-1 overflow-y-auto">
-    <div class="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+  <main class="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+    <div class="mx-auto flex max-w-2xl flex-col gap-6 py-6 pl-6 pr-3.5">
       {#if tab === "appearance"}
         <Appearance />
       {:else if tab === "about"}
         <About />
       {:else if tab === "dictionaries"}
-        {#if updatableTitles.length > 0}
-          <SettingsSection title="Updates">
-            <SettingToggle
-              label="Update Automatically"
-              bind:checked={dictConfig.autoUpdateDictionaries}
-              onchange={saveDictConfig}
-            />
-            {#if dictConfig.autoUpdateDictionaries}
-              <SettingRow label="Interval">
-                <select
-                  class="select select-sm w-36"
-                  bind:value={dictConfig.dictionaryUpdateInterval}
-                  onchange={saveDictConfig}
-                >
-                  {#each dictionaryUpdateIntervals as interval (interval)}
-                    <option>{interval}</option>
-                  {/each}
-                </select>
-              </SettingRow>
-            {/if}
-            <SettingRow label="Last Update">
-              <span class="text-sm text-base-content/60">{lastUpdate}</span>
-            </SettingRow>
-            <button
-              class="btn btn-sm"
-              onclick={() => updateDialog?.showModal()}
-              disabled={dictionaryUpdate.running}
-            >
-              {#if dictionaryUpdate.running}
-                <span class="loading loading-xs loading-spinner"></span>
-                {dictionaryUpdate.status}
-              {:else}
-                Update
-              {/if}
-            </button>
-          </SettingsSection>
-        {/if}
-
-        <div class="card border border-base-300 bg-base-100">
+        <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
           <div class="card-body gap-4">
             <div class="flex items-center justify-between">
-              <h2 class="card-title text-base">Dictionaries</h2>
+              <h2 class="card-title text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Dictionaries</h2>
               <button
                 class="btn btn-neutral btn-sm btn-square"
                 onclick={importZip}
@@ -1152,10 +1021,10 @@
           />
         </SettingsSection>
 
-        <div class="card border border-base-300 bg-base-100">
+        <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
           <div class="card-body gap-4">
             <div class="flex items-center justify-between">
-              <h2 class="card-title text-base">Custom CSS</h2>
+              <h2 class="card-title text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Custom CSS</h2>
               <button
                 class="btn btn-ghost btn-sm text-error"
                 onclick={() => {
@@ -1261,7 +1130,7 @@
           </div>
         </SettingsSection>
 
-        <div class="card border border-base-300 bg-base-100">
+        <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
           <div class="card-body gap-4">
             <SettingToggle
               label="Auto-play on Lookup"
@@ -1280,7 +1149,7 @@
           </div>
         </div>
       {:else if tab === "syncing"}
-        <SettingsSection title="Syncing">
+        <SettingsSection title="Sync">
           <SettingToggle
             label="Enable"
             bind:checked={syncConfig.enableSync}
@@ -1297,7 +1166,7 @@
         </SettingsSection>
 
         {#if syncConfig.enableSync}
-          <div class="card border border-base-300 bg-base-100">
+          <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
             <div class="card-body gap-3">
               <SettingRow label="Status">
                 <span class="text-sm text-base-content/60">
@@ -1331,7 +1200,7 @@
           </div>
 
           {#if syncAuthenticated}
-            <div class="card border border-base-300 bg-base-100">
+            <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
               <div class="card-body gap-3">
                 {#if driveStatus.lastSync !== null}
                   <SettingRow label="Last Sync">
@@ -1426,37 +1295,6 @@
 
         {#if sasayakiConfig.enableSasayaki}
           <SasayakiSettings />
-        {/if}
-      {:else if tab === "backup"}
-        {#each ["Books", "Dictionaries"] as const as folder (folder)}
-          <SettingsSection title={folder}>
-            <div class="flex gap-2">
-              <button
-                class="btn btn-outline btn-sm"
-                onclick={() => backupStorage(folder)}
-                disabled={backupBusy !== null}
-              >
-                Backup
-              </button>
-              <button
-                class="btn btn-outline btn-sm"
-                onclick={() => restoreStorage(folder)}
-                disabled={backupBusy !== null}
-              >
-                Restore
-              </button>
-            </div>
-            {#if folder === "Dictionaries"}
-              <p class="text-xs text-base-content/60">Restoring will overwrite the current collection.</p>
-            {/if}
-          </SettingsSection>
-        {/each}
-
-        {#if backupError}
-          <div class="alert alert-error">
-            <CircleAlert class="size-4" />
-            <pre class="select-text whitespace-pre-wrap font-sans text-sm">{backupError}</pre>
-          </div>
         {/if}
       {:else if tab === "input"}
         <SettingsSection title="Scanning">
@@ -1569,10 +1407,10 @@
         </SettingsSection>
 
         {#if !anki.disabled}
-          <div class="card border border-base-300 bg-base-100">
+          <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
             <div class="card-body gap-3">
               <div class="flex items-center justify-between gap-3">
-                <h2 class="card-title text-base">AnkiConnect</h2>
+                <h2 class="card-title text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">AnkiConnect</h2>
                 <span class="text-xs text-base-content/60">
                   {ankiReachable ? "Connected" : "Not connected"}
                 </span>
@@ -1619,10 +1457,10 @@
           </div>
 
           {#if ankiReachable && anki.availableDecks.length}
-            <div class="card border border-base-300 bg-base-100">
+            <div class="card rounded-[1.75rem] border border-base-content/10 bg-base-200/40">
               <div class="card-body gap-4">
                 <div class="flex items-center justify-between">
-                  <h2 class="card-title text-base">Formats</h2>
+                  <h2 class="card-title text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Formats</h2>
                   <button
                     class="btn btn-outline btn-sm"
                     onclick={addCardFormat}
@@ -1922,22 +1760,6 @@
       <div class="modal-action mt-0">
         <form method="dialog">
           <button class="btn btn-sm">Done</button>
-        </form>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>close</button>
-    </form>
-  </dialog>
-
-  <dialog class="modal" bind:this={updateDialog}>
-    <div class="modal-box">
-      <h3 class="mb-4 text-base font-semibold">Update Dictionaries</h3>
-      <p class="whitespace-pre-wrap text-sm">{updateMessage}</p>
-      <div class="modal-action">
-        <form method="dialog" class="flex gap-2">
-          <button class="btn btn-sm">Cancel</button>
-          <button class="btn btn-neutral btn-sm" onclick={runUpdate}>Update</button>
         </form>
       </div>
     </div>

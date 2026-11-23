@@ -103,7 +103,7 @@
     />
     <span class="flex items-center gap-1">
       <progress
-        class="progress h-1 flex-1 text-base-content/60"
+        class="progress h-1 flex-1 text-accent"
         value={Math.min(book.progress, 1) * 100}
         max="100"
       ></progress>
@@ -134,23 +134,25 @@
 {/snippet}
 
 <div class="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-  <div class="@container flex flex-col gap-6 p-5">
-    <h1 class="text-xl font-semibold">Home</h1>
+  <div class="@container flex flex-col gap-7 pb-10 pl-6 pr-3.5 pt-4">
+    <h1 class="text-[22px] font-medium leading-8 tracking-tight">Home</h1>
 
     {#if !statsConfig.statisticsHideOnHome}
       <HomeStatistics {model} onOpen={onStatistics} />
     {/if}
 
     <div class="grid items-start gap-7 @3xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <section class="@container/reading flex min-w-0 flex-col gap-3">
-        <h2 class="text-xs font-medium">Currently Reading</h2>
+      <section class="@container/reading flex min-w-0 flex-col gap-4 rounded-[1.75rem] border border-base-content/10 bg-base-200/40 p-5">
+        <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Currently Reading</h2>
 
         {#if readingBooks.length > 0}
           {#each visibleReadingBooks as book, index (book.id)}
             {@const remaining = timeLeft(book)}
             {@const chapter = readingInfo[book.id]?.chapter}
             <button
-              class="group grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-4 rounded-lg border border-base-300 p-3 text-left transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 @sm/reading:grid-cols-[6rem_minmax(0,1fr)] @sm/reading:gap-x-5 @sm/reading:p-4 @xl/reading:grid-cols-[6rem_minmax(0,1fr)_8.25rem] {index === 0 ? 'bg-base-200/40' : ''}"
+              class="group grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-4 rounded-2xl border p-3 text-left transition-colors @sm/reading:grid-cols-[6rem_minmax(0,1fr)] @sm/reading:gap-x-5 @sm/reading:p-4 @xl/reading:grid-cols-[6rem_minmax(0,1fr)_8.25rem] {index === 0
+                ? 'border-accent/30 bg-accent/[0.07]'
+                : 'border-base-content/10 bg-base-100/60'} hover:border-accent/40 hover:bg-accent/[0.06] focus-visible:border-accent/40"
               onclick={() => onSelect(book)}
               oncontextmenu={(e) => onMenu(book, e)}
             >
@@ -190,17 +192,17 @@
             </button>
           {/if}
         {:else}
-          <div class="flex flex-col items-start gap-3 rounded-lg border border-base-300 bg-base-200/40 p-5">
+          <div class="flex flex-col items-start gap-3 rounded-2xl border border-base-content/10 bg-base-100/40 p-4">
             <BookCheck class="size-6 text-base-content/50" />
             <h3 class="text-sm font-medium">No books in progress.</h3>
           </div>
         {/if}
       </section>
 
-      <section class="flex min-w-0 flex-col gap-4 border-t border-base-300 pt-5 @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+      <section class="flex min-w-0 flex-col gap-4 rounded-[1.75rem] border border-base-content/10 bg-base-200/40 p-5">
         <div class="flex items-center justify-between gap-3">
-          <h2 class="text-xs font-medium">Recently Imported</h2>
-          <button class="btn btn-neutral btn-sm" onclick={onImport}>
+          <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-base-content/45">Recently Imported</h2>
+          <button class="btn btn-sm rounded-full border-0 bg-accent px-3.5 text-accent-content hover:bg-accent/90" onclick={onImport}>
             <Plus class="size-4" />
             Import
           </button>

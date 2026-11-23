@@ -252,7 +252,7 @@
 </script>
 
 <div
-  data-theme={chromeTheme(false)}
+  data-theme={chromeTheme()}
   role="presentation"
   onmouseenter={() => onHover(true)}
   onmouseleave={() => menuOpen || onHover(false)}

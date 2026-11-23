@@ -19,6 +19,7 @@
 
     const layout = {
         fontSize: Number(params.get('fs')),
+        fontWeight: Number(params.get('fw')) || 300,
         horizontalPadding: Number(params.get('hp')),
         verticalPadding: Number(params.get('vp')),
         maxWidth: Number(params.get('mw')),
@@ -58,7 +59,7 @@
         const writingMode = vertical ? 'vertical-rl' : 'horizontal-tb';
         const imgWidth = `calc(${100 - paddingX}vw - 1px)`;
         const imgHeight = `${100 - paddingY}vh`;
-        const fontFamily = `${fontName ? `"${fontName}", ` : ''}"Hiragino Mincho ProN", "Yu Mincho", serif`;
+        const fontFamily = `${fontName ? `"${fontName}", ` : ''}"Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif`;
         const furiganaLine = 'rgba(150, 150, 150, 0.75)';
 
         const contentSizeCss = vertical
@@ -188,9 +189,18 @@
             body, hoshi-body {
                 -webkit-text-size-adjust: none !important;
                 font-family: ${fontFamily} !important;
+                font-weight: ${layout.fontWeight} !important;
+                font-variation-settings: "wght" ${layout.fontWeight} !important;
+                font-synthesis: none !important;
                 ${gridCss}
                 ${textSpacingCss}
                 ${fontSizeCss}
+            }
+            body *, hoshi-body * {
+                font-family: ${fontFamily} !important;
+                font-weight: ${layout.fontWeight} !important;
+                font-variation-settings: "wght" ${layout.fontWeight} !important;
+                font-synthesis: none !important;
             }
             ${paragraphSpacingCss}
             .blur-wrapper {
@@ -443,6 +453,7 @@
 
     function restyle(m) {
         layout.fontSize = m.fs;
+        layout.fontWeight = m.fw || layout.fontWeight;
         layout.horizontalPadding = m.hp;
         layout.verticalPadding = m.vp;
         layout.maxWidth = m.mw;

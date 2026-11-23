@@ -33,6 +33,15 @@ impl GoogleDriveError {
             error => error,
         }
     }
+
+    pub fn is_not_found(&self) -> bool {
+        match self {
+            GoogleDriveError::Api(message) => {
+                message.starts_with("File not found") || message == "Not Found"
+            }
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for GoogleDriveError {

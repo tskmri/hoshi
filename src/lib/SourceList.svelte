@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import Titlebar from "./Titlebar.svelte";
   import { shellConfig, saveShellConfig } from "./shellConfig.svelte";
 
   let {
@@ -17,15 +16,14 @@
 
 <aside
   bind:this={sidebarEl}
-  class="relative flex max-w-[45vw] shrink-0 flex-col border-r border-base-300 bg-base-200"
+  class="relative flex max-w-[45vw] shrink-0 flex-col"
   style:width="{shellConfig.sidebarWidth}px"
 >
-  <Titlebar class="bg-base-200" />
   <div class="min-h-0 flex-1 overflow-y-auto">
     {@render children()}
   </div>
   {#if footer}
-    <div class="flex items-center border-t border-base-300 p-1.5">
+    <div class="flex items-center p-1.5">
       {@render footer()}
     </div>
   {/if}

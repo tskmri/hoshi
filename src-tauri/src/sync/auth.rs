@@ -16,6 +16,9 @@ use crate::sync::gdrive::manager;
 
 const SERVICE: &str = "hoshi-reader";
 const SCOPE: &str = "https://www.googleapis.com/auth/drive.file";
+// Web OAuth clients require an exact pre-registered redirect URI, so the
+// callback has to use a fixed port instead of an ephemeral one.
+const REDIRECT_PORT: u16 = 42813;
 const CLIENT_ID: &str = match option_env!("HOSHI_GOOGLE_CLIENT_ID") {
     Some(id) => id,
     None => "",
@@ -74,6 +77,12 @@ pub fn access_token() -> Result<String, String> {
 }
 
 pub async fn authenticate() -> Result<(), String> {
+    if CLIENT_ID.is_empty() || CLIENT_SECRET.is_empty() {
+        return Err(
+            "Google Drive sync is not configured in this build\nSet HOSHI_GOOGLE_CLIENT_ID and HOSHI_GOOGLE_CLIENT_SECRET in .env and rebuild"
+                .to_string(),
+        );
+    }
     if !RE_CLIENT_ID.is_match(CLIENT_ID) {
         return Err("Invalid Client ID format".to_string());
     }
@@ -85,9 +94,12 @@ pub async fn authenticate() -> Result<(), String> {
 }
 
 async fn authorize() -> Result<(), String> {
-    let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
-    let port = listener.local_addr().map_err(|e| e.to_string())?.port();
-    let redirect_uri = format!("http://127.0.0.1:{port}");
+    let listener = TcpListener::bind(("127.0.0.1", REDIRECT_PORT)).map_err(|e| {
+        format!(
+            "Could not open the sign-in callback on http://127.0.0.1:{REDIRECT_PORT}\n{e}"
+        )
+    })?;
+    let redirect_uri = format!("http://127.0.0.1:{REDIRECT_PORT}");
 
     let verifier = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
@@ -184,7 +196,7 @@ pub async fn refresh_access_token() -> Result<String, GoogleDriveError> {
 
 fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, String> {
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
-    let deadline = Instant::now() + Duration::from_secs(300);
+    let deadline = Instant::now() + Duration::from_secs(120);
     loop {
         match listener.accept() {
             Ok((mut stream, _)) => {
@@ -220,7 +232,7 @@ fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, String> {
                     respond(
                         &mut stream,
                         200,
-                        "<html><body>You can close this window and return to Hoshi Reader.</body></html>",
+                        "<html><body>You can close this window and return to Hoshi.</body></html>",
                     );
                     return Ok(code.clone());
                 }
@@ -237,7 +249,9 @@ fn wait_for_code(listener: TcpListener, state: &str) -> Result<String, String> {
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 if Instant::now() >= deadline {
-                    return Err("No callback URL received".to_string());
+                    return Err(format!(
+                        "No callback URL received\nIf the browser showed an error, add http://127.0.0.1:{REDIRECT_PORT} to the OAuth client's Authorized redirect URIs"
+                    ));
                 }
                 std::thread::sleep(Duration::from_millis(200));
             }
